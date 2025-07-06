@@ -1,0 +1,745 @@
+:root {
+  /* Primary Colors */
+  --theme-primary: #ff61d8;
+  --theme-secondary: #4df4ff;
+  --theme-accent: #b6f7ff;
+  --theme-warning: #ff9b3d;
+  --theme-danger: #ff5757;
+  --theme-success: #7bffa0;
+
+  /* Background Colors */
+  --theme-background: #1a1040;
+  --theme-surface: #2a1b50;
+
+  /* Text Colors */
+  --theme-text: #ffffff;
+
+  /* Glow Effects */
+  --theme-glow-primary: rgba(255, 97, 216, 0.5);
+  --theme-glow-secondary: rgba(77, 244, 255, 0.5);
+  --theme-glow-success: rgba(123, 255, 160, 0.5);
+
+  /* Gradients */
+  --crystal-gradient: linear-gradient(
+    45deg,
+    rgba(255, 97, 216, 0.2),
+    rgba(77, 244, 255, 0.2)
+  );
+}
+
+/* Base styles */
+body {
+  background-color: var(--theme-background);
+  color: var(--theme-text);
+  font-family: "Roboto Mono", monospace;
+}
+
+/* Crystal Panel Styling */
+.crystal-panel {
+  background: var(--theme-surface);
+  border: 1px solid rgba(77, 244, 255, 0.3);
+  border-radius: 8px;
+  padding: 15px;
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(5px);
+}
+
+/* Common Layout Classes */
+.crystal-flex {
+  display: flex;
+}
+
+.crystal-flex-center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.crystal-flex-between {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.crystal-flex-start {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+.crystal-flex-end {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.crystal-gap-1 {
+  gap: 8px;
+}
+
+.crystal-gap-2 {
+  gap: 16px;
+}
+
+/* Header Navigation Icons */
+.header-nav-icon {
+  color: var(--theme-accent);
+  transition: all 0.2s;
+}
+
+.header-nav-icon:hover {
+  color: var(--theme-secondary);
+  text-shadow: 0 0 8px var(--theme-glow-secondary);
+}
+
+/* Crystal effect overlay */
+.crystal-panel::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--crystal-gradient);
+  opacity: 0.1;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Shine animation */
+.crystal-panel::after {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    transparent 100%
+  );
+  transform: rotate(45deg);
+  animation: crystalShine 12s linear infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Ensure content is above the animations */
+.crystal-panel > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Table Styling */
+.crystal-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 4px;
+}
+
+.crystal-table th {
+  color: var(--theme-secondary);
+  font-weight: normal;
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid rgba(77, 244, 255, 0.2);
+}
+
+.crystal-table td {
+  padding: 12px;
+  background: rgba(42, 27, 80, 0.5);
+  border-top: 1px solid rgba(77, 244, 255, 0.1);
+  border-bottom: 1px solid rgba(77, 244, 255, 0.1);
+}
+
+.crystal-table tr:hover td {
+  background: rgba(77, 244, 255, 0.1);
+  border-color: rgba(77, 244, 255, 0.3);
+}
+
+/* Address Subtable Styling */
+.crystal-table .address-subtable {
+  background: rgba(20, 20, 30, 0.8);
+  border: 1px solid rgba(255, 97, 216, 0.15);
+  border-radius: 8px;
+  margin: 4px 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.crystal-table .address-subtable td {
+  background: rgba(20, 20, 30, 0.6);
+  border-color: rgba(255, 97, 216, 0.1);
+}
+
+.crystal-table .address-subtable tr:hover td {
+  background: rgba(255, 97, 216, 0.05);
+  border-color: rgba(255, 97, 216, 0.2);
+}
+
+.crystal-table .address-subtable .crystal-table-header {
+  color: var(--theme-accent);
+  font-size: 0.9em;
+  border-bottom: 1px solid rgba(255, 97, 216, 0.15);
+  background: rgba(20, 20, 30, 0.8);
+}
+
+/* Collection Row Styling */
+.crystal-table .collection-row td {
+  background: rgba(42, 27, 80, 0.8);
+  border-color: rgba(77, 244, 255, 0.2);
+  font-weight: 500;
+}
+
+.crystal-table .collection-row:hover td {
+  background: rgba(77, 244, 255, 0.15);
+  border-color: rgba(77, 244, 255, 0.3);
+}
+
+/* Button Styling */
+.crystal-button {
+  color: var(--theme-text);
+  border: none;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-family: "Roboto Mono", monospace;
+  background: var(--theme-surface);
+  position: relative;
+  overflow: hidden;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  box-shadow: 0 0 15px rgba(77, 244, 255, 0.2);
+  cursor: pointer;
+}
+
+.crystal-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--crystal-gradient);
+  opacity: 0.1;
+  pointer-events: none;
+}
+
+.crystal-button:hover {
+  background: rgba(77, 244, 255, 0.1);
+  box-shadow: 0 0 20px rgba(77, 244, 255, 0.3);
+}
+
+.crystal-button:active {
+  transform: translateY(1px);
+  box-shadow: 0 2px 10px rgba(77, 244, 255, 0.2);
+}
+
+.crystal-button:disabled {
+  opacity: 0.5;
+  transform: none;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.crystal-button.success {
+  background: linear-gradient(135deg, var(--theme-success), var(--theme-secondary));
+  color: var(--theme-background);
+}
+
+/* Status Indicators */
+.status-check {
+  color: var(--theme-success);
+  text-shadow: 0 0 5px var(--theme-success);
+}
+
+.status-x {
+  color: var(--theme-danger);
+  text-shadow: 0 0 5px var(--theme-danger);
+}
+
+/* Animations */
+@keyframes crystalShine {
+  0% {
+    transform: rotate(45deg) translateY(-100%);
+  }
+  100% {
+    transform: rotate(45deg) translateY(100%);
+  }
+}
+
+/* Input Styling */
+.crystal-input {
+  background: rgba(26, 16, 64, 0.5);
+  border: 1px solid rgba(77, 244, 255, 0.3);
+  color: var(--theme-text);
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-family: "Roboto Mono", monospace;
+  transition: all 0.3s ease;
+}
+
+.crystal-input:focus {
+  outline: none;
+  border-color: var(--theme-secondary);
+  box-shadow: 0 0 10px var(--theme-glow-secondary);
+}
+
+/* Data Item Styling */
+.data-item {
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  background: rgba(26, 16, 64, 0.3);
+  border-radius: 8px;
+  border: 1px solid rgba(77, 244, 255, 0.1);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.data-item::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--crystal-gradient);
+  opacity: 0.05;
+  pointer-events: none;
+}
+
+.data-item:hover {
+  border-color: rgba(77, 244, 255, 0.3);
+  box-shadow: 0 0 15px rgba(77, 244, 255, 0.1);
+  transform: translateY(-1px);
+}
+
+.data-item label {
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+  letter-spacing: 0.05em;
+}
+
+.data-item .crystal-input {
+  background: rgba(26, 16, 64, 0.5);
+  border: 1px solid rgba(77, 244, 255, 0.2);
+  padding: 12px;
+  font-size: 1rem;
+  letter-spacing: 0.05em;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+  background: var(--theme-background);
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(77, 244, 255, 0.05);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(
+    135deg,
+    var(--theme-primary),
+    var(--theme-secondary)
+  );
+  border-radius: 4px;
+  border: 2px solid var(--theme-background);
+  transition: all 0.3s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(
+    135deg,
+    var(--theme-secondary),
+    var(--theme-primary)
+  );
+  box-shadow: 0 0 15px var(--theme-glow-secondary);
+}
+
+::-webkit-scrollbar-corner {
+  background: var(--theme-background);
+}
+
+/* Firefox scrollbar styling */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--theme-secondary) var(--theme-background);
+}
+
+/* Custom scrollable container styling */
+.scrollable-container {
+  scrollbar-gutter: stable;
+  &::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  &::-webkit-scrollbar-track {
+    background: rgba(77, 244, 255, 0.05);
+    border-radius: 4px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: linear-gradient(
+      135deg,
+      var(--theme-primary),
+      var(--theme-secondary)
+    );
+    border-radius: 4px;
+    border: 2px solid var(--theme-background);
+  }
+  &::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(
+      135deg,
+      var(--theme-secondary),
+      var(--theme-primary)
+    );
+    box-shadow: 0 0 15px var(--theme-glow-secondary);
+  }
+}
+
+/* Crystal Link Styling */
+.crystal-link {
+  color: var(--theme-accent);
+  text-decoration: none;
+  transition: all 0.2s;
+  font-family: "Roboto Mono", monospace;
+}
+
+.crystal-link:hover {
+  color: var(--theme-secondary);
+  text-decoration: underline;
+  text-shadow: 0 0 8px var(--theme-glow-secondary);
+}
+
+/* Crystal Typography Styling */
+.crystal-heading {
+  color: var(--theme-secondary);
+  textShadow: 0 0 5px var(--theme-glow-secondary);
+  marginBottom: 1rem;
+}
+
+.crystal-text {
+  color: var(--theme-accent);
+  marginBottom: 1rem;
+}
+
+.crystal-label {
+  color: var(--theme-secondary);
+  marginBottom: 0.5rem;
+  display: block;
+}
+
+/* Button Variants */
+.crystal-button-primary {
+  background: linear-gradient(135deg, var(--theme-secondary), var(--theme-primary)) !important;
+  color: #000000 !important;
+  text-shadow: 0 0 3px rgba(77, 244, 255, 0.3) !important;
+  box-shadow: 
+    inset 0 0 10px rgba(255, 255, 255, 0.2),
+    0 0 10px var(--theme-glow-secondary) !important;
+}
+
+.crystal-button-primary:hover {
+  background: linear-gradient(135deg, var(--theme-primary), var(--theme-secondary)) !important;
+  box-shadow: 
+    inset 0 0 15px rgba(255, 255, 255, 0.3),
+    0 0 15px var(--theme-glow-secondary) !important;
+}
+
+.crystal-button-primary:active {
+  box-shadow: 
+    inset 0 0 5px rgba(255, 255, 255, 0.2),
+    0 0 5px var(--theme-glow-secondary) !important;
+}
+
+.crystal-button-primary::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    transparent 100%
+  );
+  transform: rotate(45deg);
+  animation: crystalShine 3s linear infinite;
+}
+
+.crystal-button-danger {
+  background: linear-gradient(135deg, var(--theme-danger), var(--theme-warning));
+  color: #000000;
+  text-shadow: 0 0 3px rgba(255, 87, 87, 0.3);
+}
+
+.crystal-button-danger:hover {
+  background: linear-gradient(135deg, var(--theme-warning), var(--theme-danger));
+  box-shadow: 0 0 15px var(--theme-glow-primary);
+}
+
+.crystal-button-surface {
+  background: var(--theme-surface);
+  color: var(--theme-text);
+}
+
+.crystal-button-surface:hover {
+  background: rgba(77, 244, 255, 0.1);
+  box-shadow: 0 0 10px var(--theme-glow-secondary);
+}
+
+/* Status Indicators */
+.crystal-status {
+  marginBottom: 2rem;
+  textAlign: right;
+}
+
+.crystal-status-success {
+  color: var(--theme-success);
+}
+
+.crystal-status-error {
+  color: var(--theme-danger);
+}
+
+.crystal-status-warning {
+  color: var(--theme-warning);
+}
+
+/* Crystal List Styling */
+.crystal-list {
+  margin: 0;
+  padding-left: 1.5rem;
+}
+
+.crystal-list li {
+  margin-bottom: 0.5rem;
+}
+
+/* Icon Button Variants */
+.crystal-icon-button {
+  color: var(--theme-accent);
+  transition: all 0.2s;
+}
+
+.crystal-icon-button:hover {
+  color: var(--theme-secondary);
+  text-shadow: 0 0 8px var(--theme-glow-secondary);
+}
+
+.crystal-icon-button-success {
+  color: var(--theme-success);
+}
+
+.crystal-icon-button-success:hover {
+  color: var(--theme-secondary);
+  text-shadow: 0 0 8px var(--theme-glow-success);
+}
+
+.crystal-icon-button-danger {
+  color: var(--theme-danger);
+}
+
+.crystal-icon-button-danger:hover {
+  color: var(--theme-warning);
+  text-shadow: 0 0 8px var(--theme-glow-primary);
+}
+
+/* Table Cell Variants */
+.crystal-table-cell {
+  color: var(--theme-text);
+  font-family: "Roboto Mono", monospace;
+}
+
+.crystal-table-header {
+  color: var(--theme-secondary);
+  font-weight: normal;
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid rgba(77, 244, 255, 0.2);
+}
+
+/* Typography */
+.crystal-text {
+  color: var(--theme-text);
+  font-family: "Roboto Mono", monospace;
+}
+
+.crystal-text-secondary {
+  color: var(--theme-secondary);
+}
+
+.crystal-text-accent {
+  color: var(--theme-accent);
+}
+
+.crystal-text-success {
+  color: var(--theme-success);
+}
+
+.crystal-text-danger {
+  color: var(--theme-danger);
+}
+
+.crystal-text-warning {
+  color: var(--theme-warning);
+}
+
+/* Action Button Styling */
+.crystal-action-button {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  background: rgba(42, 27, 80, 0.5);
+  border: 1px solid rgba(77, 244, 255, 0.2);
+}
+
+.crystal-action-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--crystal-gradient);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.crystal-action-button:hover::before {
+  opacity: 0.1;
+}
+
+.crystal-action-button-success {
+  color: var(--theme-success);
+  border-color: rgba(123, 255, 160, 0.3);
+}
+
+.crystal-action-button-success:hover {
+  background: rgba(123, 255, 160, 0.1);
+  box-shadow: 0 0 15px var(--theme-glow-success);
+  border-color: rgba(123, 255, 160, 0.5);
+}
+
+.crystal-action-button-danger {
+  color: var(--theme-danger);
+  border-color: rgba(255, 87, 87, 0.3);
+}
+
+.crystal-action-button-danger:hover {
+  background: rgba(255, 87, 87, 0.1);
+  box-shadow: 0 0 15px rgba(255, 87, 87, 0.3);
+  border-color: rgba(255, 87, 87, 0.5);
+}
+
+.crystal-action-button svg {
+  width: 18px;
+  height: 18px;
+  transition: transform 0.3s ease;
+}
+
+.crystal-action-button:hover svg {
+  transform: scale(1.1);
+}
+
+/* Crystal Toggle Group Styling */
+.crystal-toggle-group {
+  display: flex;
+  gap: 2px;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 2px;
+  border-radius: 4px;
+  border: 1px solid rgba(77, 244, 255, 0.2);
+  box-shadow: 0 0 10px rgba(77, 244, 255, 0.1);
+  backdrop-filter: blur(5px);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.crystal-toggle-button {
+  color: var(--theme-text);
+  border: 1px solid rgba(77, 244, 255, 0.2);
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: 12px;
+  font-family: "Roboto Mono", monospace;
+  transition: all 0.3s ease;
+  background: var(--theme-surface);
+  position: relative;
+  overflow: hidden;
+  min-width: 40px;
+  flex: 0 1 auto;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  box-shadow: 0 0 5px rgba(77, 244, 255, 0.1);
+}
+
+.crystal-toggle-button:hover {
+  background: rgba(77, 244, 255, 0.1);
+  border-color: rgba(77, 244, 255, 0.4);
+  box-shadow: 0 0 10px rgba(77, 244, 255, 0.2);
+}
+
+.crystal-toggle-button.active {
+  background: linear-gradient(135deg, var(--theme-secondary), var(--theme-primary));
+  color: #000000;
+  text-shadow: 0 0 3px rgba(77, 244, 255, 0.3);
+  border-color: rgba(77, 244, 255, 0.5);
+  box-shadow: 
+    inset 0 0 10px rgba(255, 255, 255, 0.2),
+    0 0 10px var(--theme-glow-secondary);
+}
+
+.crystal-toggle-button:first-child {
+  border-radius: 3px 0 0 3px;
+}
+
+.crystal-toggle-button:last-child {
+  border-radius: 0 3px 3px 0;
+}
+
+.crystal-toggle-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--crystal-gradient);
+  opacity: 0.1;
+  pointer-events: none;
+}
+
+.crystal-toggle-button.active::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    transparent 100%
+  );
+  transform: rotate(45deg);
+  animation: crystalShine 3s linear infinite;
+} 

@@ -1,0 +1,21 @@
+version: "3.8"
+
+services:
+  bituniverse:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bituniverse
+    restart: unless-stopped
+    ports:
+      - "3217:3217"
+    volumes:
+      - ./server/data:/app/server/data
+    environment:
+      - NODE_ENV=production
+    networks:
+      - bituniverse-network
+
+networks:
+  bituniverse-network:
+    driver: bridge
