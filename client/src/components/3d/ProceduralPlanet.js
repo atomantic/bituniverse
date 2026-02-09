@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState, forwardRef } from "react";
+import React, { useRef, useEffect, useMemo, forwardRef } from "react";
 import * as THREE from "three";
 import { useFrame, useThree } from "@react-three/fiber";
 import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
@@ -6,6 +6,13 @@ import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { PLANET_TYPES } from "../../config/planetTypes";
+import {
+  toonVertexShader,
+  toonFragmentShader,
+  atmosphereVertexShader,
+  atmosphereFragmentShader,
+  MOEBIUS_PALETTE,
+} from "../../shaders/ToonShader";
 
 // Simple noise function for terrain variation
 function noise(x, y, z) {
@@ -90,7 +97,7 @@ const ProceduralPlanet = forwardRef(
     {
       radius = 1,
       seed = 0,
-      color = 0x8b4513,
+      color = MOEBIUS_PALETTE.planet1,
       type = PLANET_TYPES.ROCKY,
       position = [0, 0, 0],
       hasAtmosphere = true,
@@ -111,6 +118,37 @@ const ProceduralPlanet = forwardRef(
     const geometryRef = useRef();
     const composerRef = useRef();
     const { gl, scene, camera } = useThree();
+
+    const planetMaterial = useMemo(() => {
+      return new THREE.ShaderMaterial({
+        vertexShader: toonVertexShader,
+        fragmentShader: toonFragmentShader,
+        uniforms: {
+          color: { value: new THREE.Color(color) },
+          glowColor: { value: MOEBIUS_PALETTE.glow },
+          time: { value: 0 },
+        },
+      });
+    }, [color]);
+
+    const atmosphereMaterial = useMemo(() => {
+      return new THREE.ShaderMaterial({
+        vertexShader: atmosphereVertexShader,
+        fragmentShader: atmosphereFragmentShader,
+        uniforms: {
+          atmosphereColor: { value: MOEBIUS_PALETTE.atmosphere },
+          time: { value: 0 },
+        },
+        transparent: true,
+        side: THREE.BackSide,
+      });
+    }, []);
+
+    useFrame(({ clock }) => {
+      const time = clock.getElapsedTime();
+      planetMaterial.uniforms.time.value = time;
+      atmosphereMaterial.uniforms.time.value = time;
+    });
 
     useEffect(() => {
       if (!meshRef.current) return;
@@ -144,19 +182,6 @@ const ProceduralPlanet = forwardRef(
       geometryRef.current = geometry;
       meshRef.current.geometry = geometry;
 
-      // Create material with properties based on planet type and state
-      const material = new THREE.MeshStandardMaterial({
-        color: color,
-        metalness: metalness,
-        roughness: roughness,
-        flatShading: true,
-        envMapIntensity: isSelected ? 1.0 : isHovered ? 0.8 : 0.5,
-        emissive: color,
-        emissiveIntensity: isSelected ? 0.5 : isHovered ? 0.3 : 0.0,
-      });
-
-      meshRef.current.material = material;
-
       // Create atmosphere if needed
       if (hasAtmosphere) {
         const atmosphereGeometry = new THREE.SphereGeometry(
@@ -164,25 +189,9 @@ const ProceduralPlanet = forwardRef(
           32,
           32
         );
-        const atmosphereMaterial = new THREE.MeshStandardMaterial({
-          color: color,
-          transparent: true,
-          opacity: isSelected
-            ? atmosphereOpacity * 1.5
-            : isHovered
-            ? atmosphereOpacity * 1.2
-            : atmosphereOpacity,
-          metalness: metalness,
-          roughness: roughness,
-          emissive: color,
-          emissiveIntensity: isSelected ? 0.4 : isHovered ? 0.3 : 0.2,
-          side: THREE.BackSide,
-          envMapIntensity: isSelected ? 1.5 : isHovered ? 1.2 : 1.0,
-        });
 
         if (atmosphereRef.current) {
           atmosphereRef.current.geometry = atmosphereGeometry;
-          atmosphereRef.current.material = atmosphereMaterial;
         }
       }
 
@@ -226,15 +235,8 @@ const ProceduralPlanet = forwardRef(
     }, [
       radius,
       seed,
-      color,
-      type,
-      hasAtmosphere,
-      atmosphereOpacity,
-      metalness,
-      roughness,
       terrainExaggeration,
-      isSelected,
-      isHovered,
+      hasAtmosphere,
       gl,
       scene,
       camera,
@@ -244,41 +246,16 @@ const ProceduralPlanet = forwardRef(
       <group position={position}>
         <mesh
           ref={meshRef}
+          material={planetMaterial}
           onPointerOver={() => onHover?.()}
           onPointerOut={() => onUnhover?.()}
           onClick={() => onClick?.()}
         >
           <sphereGeometry args={[radius, 32, 32]} />
-          <meshStandardMaterial
-            color={color}
-            metalness={metalness}
-            roughness={roughness}
-            flatShading={true}
-            envMapIntensity={isSelected ? 1.0 : isHovered ? 0.8 : 0.5}
-            emissive={color}
-            emissiveIntensity={isSelected ? 0.5 : isHovered ? 0.3 : 0.0}
-          />
         </mesh>
         {hasAtmosphere && (
-          <mesh ref={atmosphereRef}>
+          <mesh ref={atmosphereRef} material={atmosphereMaterial}>
             <sphereGeometry args={[radius * 1.1, 32, 32]} />
-            <meshStandardMaterial
-              color={color}
-              transparent={true}
-              opacity={
-                isSelected
-                  ? atmosphereOpacity * 1.5
-                  : isHovered
-                  ? atmosphereOpacity * 1.2
-                  : atmosphereOpacity
-              }
-              metalness={metalness}
-              roughness={roughness}
-              emissive={color}
-              emissiveIntensity={isSelected ? 0.4 : isHovered ? 0.3 : 0.2}
-              side={THREE.BackSide}
-              envMapIntensity={isSelected ? 1.5 : isHovered ? 1.2 : 1.0}
-            />
           </mesh>
         )}
       </group>
@@ -289,3 +266,4 @@ const ProceduralPlanet = forwardRef(
 ProceduralPlanet.displayName = "ProceduralPlanet";
 
 export default ProceduralPlanet;
+

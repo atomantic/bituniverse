@@ -9,7 +9,7 @@ import {
   getRandomPlanetType,
   generatePlanetColor,
 } from "../config/planetTypes";
-import { SCAVENGER_PALETTE } from "../shaders/ToonShader";
+import { MOEBIUS_PALETTE } from "../shaders/ToonShader";
 
 // Generate deterministic planet data based on galaxy and star IDs
 function generatePlanetData(galaxyId, starId) {
@@ -62,7 +62,7 @@ function SolarSystem({ galaxyId, starId, onPlanetHover, onStarHover }) {
   const controlsRef = useRef();
   const [planets, setPlanets] = useState([]);
   const [isReady, setIsReady] = useState(false);
-  const [starColor, setStarColor] = useState(SCAVENGER_PALETTE.star);
+  const [starColor, setStarColor] = useState(MOEBIUS_PALETTE.glow);
   const [hoveredPlanet, setHoveredPlanet] = useState(null);
   const [selectedPlanet, setSelectedPlanet] = useState(null);
   const [hoveredStar, setHoveredStar] = useState(null);

@@ -24,11 +24,11 @@ app.get("/manifest.json", (req, res, next) => {
   next();
 });
 
-app.use(express.static(memory.dirUI));
+app.use(express.static("../client/dist"));
 
 const PORT = process.env.PORT || 3233;
 server.listen(PORT, () => {
-  logger.system(`Server listening on port ${PORT}`);
+  console.log(`Server listening on port ${PORT}`);
   socketIO.init(server);
   telegram.init();
 });
