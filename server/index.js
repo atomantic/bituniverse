@@ -1,9 +1,12 @@
 "use strict";
 
+import { fileURLToPath } from "url";
+import path from "path";
 import express from "express";
 import cors from "cors";
 import http from "http";
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const server = http.createServer(app);
 app.use((req, res, next) => {
@@ -24,11 +27,9 @@ app.get("/manifest.json", (req, res, next) => {
   next();
 });
 
-app.use(express.static("../client/dist"));
+app.use(express.static(path.join(__dirname, "../client/build")));
 
 const PORT = process.env.PORT || 3233;
 server.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
-  socketIO.init(server);
-  telegram.init();
 });
