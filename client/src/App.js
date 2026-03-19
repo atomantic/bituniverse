@@ -139,6 +139,16 @@ function AppContent() {
                 />
               }
             />
+            <Route
+              path="/galaxy/:galaxyId/star/:starId/planet/:planetId/surface"
+              element={
+                <Scene
+                  baseKeyOffset={baseKeyOffset}
+                  onKeyOffsetChange={setBaseKeyOffset}
+                  view="surface"
+                />
+              }
+            />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Router>

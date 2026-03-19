@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useMemo } from "react";
 import { useThree, useFrame } from "@react-three/fiber";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import * as THREE from "three";
@@ -46,13 +46,114 @@ function generatePlanetData(galaxyId, starId) {
       seed: planetSeed,
       hasAtmosphere: planetType.hasAtmosphere,
       atmosphereOpacity: planetType.atmosphereOpacity,
+      atmosphereColor: planetType.atmosphereColor,
       metalness: planetType.metalness,
       roughness: planetType.roughness,
       terrainExaggeration: planetType.terrainExaggeration,
+      planetTypeConfig: planetType,
     });
   }
 
   return planets;
+}
+
+// Orbital path ring component
+function OrbitalPath({ distance }) {
+  const points = useMemo(() => {
+    const curve = new THREE.EllipseCurve(0, 0, distance, distance, 0, 2 * Math.PI, false, 0);
+    const pts = curve.getPoints(128);
+    return pts.map((p) => new THREE.Vector3(p.x, 0, p.y));
+  }, [distance]);
+
+  const geometry = useMemo(() => {
+    return new THREE.BufferGeometry().setFromPoints(points);
+  }, [points]);
+
+  return (
+    <line geometry={geometry}>
+      <lineBasicMaterial color="#ffffff" opacity={0.08} transparent />
+    </line>
+  );
+}
+
+// Animated planet wrapper
+function OrbitingPlanet({ planet, galaxyId, starId, isSelected, isHovered, onHover, onUnhover, onClick }) {
+  const groupRef = useRef();
+
+  useFrame(({ clock }) => {
+    if (!groupRef.current) return;
+    const elapsed = clock.getElapsedTime();
+    const angle = -(planet.rotationOffset + planet.rotationSpeed * elapsed * 0.3);
+    const x = Math.cos(angle) * planet.distance;
+    const z = Math.sin(angle) * planet.distance;
+    groupRef.current.position.set(x, 0, z);
+  });
+
+  // Initial position
+  const initAngle = -planet.rotationOffset;
+  const initX = Math.cos(initAngle) * planet.distance;
+  const initZ = Math.sin(initAngle) * planet.distance;
+
+  return (
+    <group ref={groupRef} position={[initX, 0, initZ]}>
+      <ProceduralPlanet
+        radius={planet.size}
+        seed={planet.seed}
+        color={planet.color}
+        type={planet.type}
+        planetTypeConfig={planet.planetTypeConfig}
+        hasAtmosphere={planet.hasAtmosphere}
+        atmosphereOpacity={planet.atmosphereOpacity}
+        atmosphereColor={planet.atmosphereColor}
+        metalness={planet.metalness}
+        roughness={planet.roughness}
+        terrainExaggeration={planet.terrainExaggeration}
+        rotationSpeed={planet.rotationSpeed}
+        detail={32}
+        onHover={onHover}
+        onUnhover={onUnhover}
+        onClick={onClick}
+        isSelected={isSelected}
+        isHovered={isHovered}
+      />
+    </group>
+  );
+}
+
+// Star with layered glow
+function StarMesh({ starColor, isSelected, isHovered, onHover, onUnhover, onClick, starRef }) {
+  return (
+    <group>
+      {/* Core */}
+      <mesh
+        ref={starRef}
+        onPointerOver={onHover}
+        onPointerOut={onUnhover}
+        onClick={onClick}
+      >
+        <sphereGeometry args={[3, 32, 32]} />
+        <meshStandardMaterial
+          color={starColor}
+          emissive={starColor}
+          emissiveIntensity={isSelected ? 3 : isHovered ? 2.5 : 2}
+          metalness={0.1}
+          roughness={0.2}
+        />
+      </mesh>
+      {/* Outer glow */}
+      <mesh>
+        <sphereGeometry args={[4.5, 32, 32]} />
+        <meshBasicMaterial
+          color={starColor}
+          transparent
+          opacity={0.15}
+          side={THREE.BackSide}
+          blending={THREE.AdditiveBlending}
+          depthWrite={false}
+        />
+      </mesh>
+    </group>
+  );
 }
 
 function SolarSystem({ galaxyId, starId, onPlanetHover, onStarHover }) {
@@ -86,7 +187,6 @@ function SolarSystem({ galaxyId, starId, onPlanetHover, onStarHover }) {
     controls.dampingFactor = 0.05;
     controls.minDistance = 20;
     controls.maxDistance = 100;
-    controls.maxPolarAngle = Math.PI / 2;
     controls.target.set(0, 0, 0);
     controls.update();
     controlsRef.current = controls;
@@ -98,10 +198,10 @@ function SolarSystem({ galaxyId, starId, onPlanetHover, onStarHover }) {
 
   useEffect(() => {
     if (!camera) return;
-    // Position camera directly above the solar system
-    camera.position.set(0, 60, 0);
+    // Position camera at a 45-degree angle
+    camera.position.set(40, 50, 40);
     camera.lookAt(0, 0, 0);
-    camera.up.set(0, 0, 1); // Set up vector to maintain correct orientation
+    camera.up.set(0, 1, 0);
   }, [camera]);
 
   useFrame((state) => {
@@ -150,53 +250,35 @@ function SolarSystem({ galaxyId, starId, onPlanetHover, onStarHover }) {
       />
 
       {/* Star */}
-      <mesh
-        ref={starRef}
-        onPointerOver={() => setHoveredStar(true)}
-        onPointerOut={() => setHoveredStar(null)}
+      <StarMesh
+        starRef={starRef}
+        starColor={starColor}
+        isSelected={selectedStar}
+        isHovered={hoveredStar}
+        onHover={() => setHoveredStar(true)}
+        onUnhover={() => setHoveredStar(null)}
         onClick={handleStarClick}
-      >
-        <sphereGeometry args={[3, 32, 32]} />
-        <meshStandardMaterial
-          color={starColor}
-          emissive={starColor}
-          emissiveIntensity={selectedStar ? 3 : hoveredStar ? 2.5 : 2}
-          metalness={0.1}
-          roughness={0.2}
+      />
+
+      {/* Orbital paths */}
+      {planets.map((planet) => (
+        <OrbitalPath key={`orbit-${planet.id}`} distance={planet.distance} />
+      ))}
+
+      {/* Planets with animated orbits */}
+      {planets.map((planet) => (
+        <OrbitingPlanet
+          key={planet.id}
+          planet={planet}
+          galaxyId={galaxyId}
+          starId={starId}
+          isSelected={selectedPlanet?.id === planet.id}
+          isHovered={hoveredPlanet?.id === planet.id}
+          onHover={() => setHoveredPlanet(planet)}
+          onUnhover={() => setHoveredPlanet(null)}
+          onClick={() => handlePlanetClick(planet)}
         />
-      </mesh>
-
-      {/* Planets */}
-      {planets.map((planet) => {
-        // Calculate position in a clockwise orbit
-        const angle = -((planet.id * 2 * Math.PI) / planets.length); // Negative for clockwise
-        const x = Math.cos(angle) * planet.distance;
-        const z = Math.sin(angle) * planet.distance;
-
-        const isSelected = selectedPlanet?.id === planet.id;
-        const isHovered = hoveredPlanet?.id === planet.id;
-
-        return (
-          <ProceduralPlanet
-            key={planet.id}
-            radius={planet.size}
-            seed={planet.seed}
-            color={planet.color}
-            type={planet.type}
-            position={[x, 0, z]}
-            hasAtmosphere={planet.hasAtmosphere}
-            atmosphereOpacity={planet.atmosphereOpacity}
-            metalness={planet.metalness}
-            roughness={planet.roughness}
-            terrainExaggeration={planet.terrainExaggeration}
-            onHover={() => setHoveredPlanet(planet)}
-            onUnhover={() => setHoveredPlanet(null)}
-            onClick={() => handlePlanetClick(planet)}
-            isSelected={isSelected}
-            isHovered={isHovered}
-          />
-        );
-      })}
+      ))}
     </group>
   );
 }

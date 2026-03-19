@@ -11,6 +11,8 @@ import {
   toonFragmentShader,
   atmosphereVertexShader,
   atmosphereFragmentShader,
+  ringVertexShader,
+  ringFragmentShader,
   MOEBIUS_PALETTE,
 } from "../../shaders/ToonShader";
 
@@ -92,6 +94,23 @@ const permutation = [
 for (let i = 0; i < 256; i++) p[i] = permutation[i];
 for (let i = 0; i < 256; i++) p[256 + i] = p[i];
 
+// Fractional Brownian Motion — layers noise at multiple octaves
+function fbm(x, y, z, octaves = 4) {
+  let value = 0;
+  let amplitude = 1;
+  let frequency = 1;
+  let maxValue = 0;
+
+  for (let i = 0; i < octaves; i++) {
+    value += amplitude * noise(x * frequency, y * frequency, z * frequency);
+    maxValue += amplitude;
+    amplitude *= 0.5;
+    frequency *= 2.0;
+  }
+
+  return value / maxValue;
+}
+
 const ProceduralPlanet = forwardRef(
   (
     {
@@ -99,12 +118,16 @@ const ProceduralPlanet = forwardRef(
       seed = 0,
       color = MOEBIUS_PALETTE.planet1,
       type = PLANET_TYPES.ROCKY,
+      planetTypeConfig,
       position = [0, 0, 0],
       hasAtmosphere = true,
       atmosphereOpacity = 0.2,
+      atmosphereColor,
       metalness = 0.2,
       roughness = 0.8,
       terrainExaggeration = 0.15,
+      rotationSpeed = 0,
+      detail = 32,
       onHover,
       onUnhover,
       onClick,
@@ -119,44 +142,88 @@ const ProceduralPlanet = forwardRef(
     const composerRef = useRef();
     const { gl, scene, camera } = useThree();
 
+    // Resolve planet type config for palette/rings/octaves
+    const typeConfig = planetTypeConfig ?? type;
+    const octaves = typeConfig?.noiseOctaves ?? 4;
+    const palette = typeConfig?.colorPalette;
+    const hasRings = typeConfig?.hasRings ?? false;
+    const resolvedAtmosphereColor =
+      atmosphereColor ?? typeConfig?.atmosphereColor ?? MOEBIUS_PALETTE.atmosphere;
+
     const planetMaterial = useMemo(() => {
+      const hasElevation = !!palette;
       return new THREE.ShaderMaterial({
         vertexShader: toonVertexShader,
         fragmentShader: toonFragmentShader,
         uniforms: {
           color: { value: new THREE.Color(color) },
+          colorLow: { value: palette?.low ?? new THREE.Color(color) },
+          colorMid: { value: palette?.mid ?? new THREE.Color(color) },
+          colorHigh: { value: palette?.high ?? new THREE.Color(color) },
           glowColor: { value: MOEBIUS_PALETTE.glow },
+          lightPosition: { value: new THREE.Vector3(-5, 3, 5).normalize() },
           time: { value: 0 },
+          useElevationColors: { value: hasElevation ? 1.0 : 0.0 },
+          elevationMin: { value: 0.0 },
+          elevationMax: { value: 1.0 },
         },
       });
-    }, [color]);
+    }, [color, palette]);
 
     const atmosphereMaterial = useMemo(() => {
       return new THREE.ShaderMaterial({
         vertexShader: atmosphereVertexShader,
         fragmentShader: atmosphereFragmentShader,
         uniforms: {
-          atmosphereColor: { value: MOEBIUS_PALETTE.atmosphere },
+          atmosphereColor: { value: new THREE.Color(resolvedAtmosphereColor) },
           time: { value: 0 },
         },
         transparent: true,
         side: THREE.BackSide,
       });
-    }, []);
+    }, [resolvedAtmosphereColor]);
+
+    const ringMaterial = useMemo(() => {
+      if (!hasRings) return null;
+      return new THREE.ShaderMaterial({
+        vertexShader: ringVertexShader,
+        fragmentShader: ringFragmentShader,
+        uniforms: {
+          ringColor: {
+            value: palette?.mid ?? new THREE.Color(color),
+          },
+          seed: { value: typeof seed === "number" ? seed : 0 },
+        },
+        transparent: true,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+      });
+    }, [hasRings, palette, color, seed]);
 
     useFrame(({ clock }) => {
       const time = clock.getElapsedTime();
       planetMaterial.uniforms.time.value = time;
       atmosphereMaterial.uniforms.time.value = time;
+
+      // Slow rotation
+      if (meshRef.current && rotationSpeed > 0) {
+        meshRef.current.rotation.y += 0.002 * rotationSpeed;
+      }
     });
 
     useEffect(() => {
       if (!meshRef.current) return;
 
-      const geometry = new THREE.SphereGeometry(radius, 32, 32);
+      const segments = detail;
+      const geometry = new THREE.SphereGeometry(radius, segments, segments);
 
-      // Generate unique terrain based on seed and type
+      // Generate unique terrain based on seed and type using fBm
       const vertices = geometry.attributes.position.array;
+      let minDist = Infinity;
+      let maxDist = -Infinity;
+
+      // First pass: compute fBm heights and track min/max
+      const heights = new Float32Array(vertices.length / 3);
       for (let i = 0; i < vertices.length; i += 3) {
         const x = vertices[i];
         const y = vertices[i + 1];
@@ -164,14 +231,28 @@ const ProceduralPlanet = forwardRef(
         const vector = new THREE.Vector3(x, y, z);
         vector.normalize();
 
-        // Use seed for terrain variation
-        const height = noise(
-          vector.x * 4 + seed,
-          vector.y * 4 + seed,
-          vector.z * 4 + seed
+        const seedVal = typeof seed === "number" ? seed : 0;
+        const height = fbm(
+          vector.x * 4 + seedVal,
+          vector.y * 4 + seedVal,
+          vector.z * 4 + seedVal,
+          octaves
         );
 
-        vector.multiplyScalar(radius + height * terrainExaggeration);
+        const dist = radius + height * terrainExaggeration;
+        heights[i / 3] = dist;
+        minDist = Math.min(minDist, dist);
+        maxDist = Math.max(maxDist, dist);
+      }
+
+      // Second pass: apply heights
+      for (let i = 0; i < vertices.length; i += 3) {
+        const x = vertices[i];
+        const y = vertices[i + 1];
+        const z = vertices[i + 2];
+        const vector = new THREE.Vector3(x, y, z);
+        vector.normalize();
+        vector.multiplyScalar(heights[i / 3]);
 
         vertices[i] = vector.x;
         vertices[i + 1] = vector.y;
@@ -182,17 +263,18 @@ const ProceduralPlanet = forwardRef(
       geometryRef.current = geometry;
       meshRef.current.geometry = geometry;
 
+      // Update elevation range uniforms
+      planetMaterial.uniforms.elevationMin.value = minDist;
+      planetMaterial.uniforms.elevationMax.value = maxDist;
+
       // Create atmosphere if needed
-      if (hasAtmosphere) {
+      if (hasAtmosphere && atmosphereRef.current) {
         const atmosphereGeometry = new THREE.SphereGeometry(
           radius * 1.1,
-          32,
-          32
+          segments,
+          segments
         );
-
-        if (atmosphereRef.current) {
-          atmosphereRef.current.geometry = atmosphereGeometry;
-        }
+        atmosphereRef.current.geometry = atmosphereGeometry;
       }
 
       // Set up post-processing
@@ -214,20 +296,15 @@ const ProceduralPlanet = forwardRef(
 
       // Cleanup function
       return () => {
-        // Dispose of geometry
         if (geometryRef.current) {
           geometryRef.current.dispose();
         }
-
-        // Dispose of materials
         if (meshRef.current?.material) {
           meshRef.current.material.dispose();
         }
         if (atmosphereRef.current?.material) {
           atmosphereRef.current.material.dispose();
         }
-
-        // Dispose of post-processing
         if (composerRef.current) {
           composerRef.current.dispose();
         }
@@ -240,6 +317,9 @@ const ProceduralPlanet = forwardRef(
       gl,
       scene,
       camera,
+      detail,
+      octaves,
+      planetMaterial,
     ]);
 
     return (
@@ -251,11 +331,19 @@ const ProceduralPlanet = forwardRef(
           onPointerOut={() => onUnhover?.()}
           onClick={() => onClick?.()}
         >
-          <sphereGeometry args={[radius, 32, 32]} />
+          <sphereGeometry args={[radius, detail, detail]} />
         </mesh>
         {hasAtmosphere && (
           <mesh ref={atmosphereRef} material={atmosphereMaterial}>
-            <sphereGeometry args={[radius * 1.1, 32, 32]} />
+            <sphereGeometry args={[radius * 1.1, detail, detail]} />
+          </mesh>
+        )}
+        {hasRings && ringMaterial && (
+          <mesh
+            material={ringMaterial}
+            rotation={[Math.PI / 2.5, 0, 0]}
+          >
+            <ringGeometry args={[radius * 1.4, radius * 2.2, 64]} />
           </mesh>
         )}
       </group>
@@ -266,4 +354,3 @@ const ProceduralPlanet = forwardRef(
 ProceduralPlanet.displayName = "ProceduralPlanet";
 
 export default ProceduralPlanet;
-

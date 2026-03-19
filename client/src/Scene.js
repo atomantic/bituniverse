@@ -26,6 +26,7 @@ import {
 import * as THREE from "three";
 import PlanetInfoPanel from "./components/PlanetInfoPanel";
 import PlanetView from "./views/PlanetView";
+import SurfaceView from "./views/SurfaceView";
 
 // Create a wrapper component to access Three.js context
 function SceneContent({
@@ -127,6 +128,7 @@ function SceneContent({
         setIsControlsVisible((prev) => !prev),
       [KEYBOARD_ACTIONS.TOGGLE_INFO]: () => setIsInfoVisible((prev) => !prev),
       [KEYBOARD_ACTIONS.NAVIGATE_LEFT]: () => {
+        if (view === "surface") return; // No left/right nav on surface
         if (view === "planet") {
           const currentPlanetId = parseInt(planetId, 10);
           const newPlanetId = wrapIndex(currentPlanetId - 1, 10);
@@ -144,6 +146,7 @@ function SceneContent({
         }
       },
       [KEYBOARD_ACTIONS.NAVIGATE_RIGHT]: () => {
+        if (view === "surface") return; // No left/right nav on surface
         if (view === "planet") {
           const currentPlanetId = parseInt(planetId, 10);
           const newPlanetId = wrapIndex(currentPlanetId + 1, 10);
@@ -309,6 +312,24 @@ function SceneContent({
 
         animate();
       },
+      [KEYBOARD_ACTIONS.ZOOM_IN]: () => {
+        if (view === "planet" && galaxyId && starId && planetId) {
+          navigate(`/galaxy/${galaxyId}/star/${starId}/planet/${planetId}/surface`);
+        } else if (view === "solarSystem" && galaxyId && starId) {
+          navigate(`/galaxy/${galaxyId}/star/${starId}/planet/0`);
+        } else if (view === "galaxy" && galaxyId) {
+          navigate(`/galaxy/${galaxyId}/star/0`);
+        }
+      },
+      [KEYBOARD_ACTIONS.ZOOM_OUT]: () => {
+        if (view === "surface" && galaxyId && starId && planetId) {
+          navigate(`/galaxy/${galaxyId}/star/${starId}/planet/${planetId}`);
+        } else if (view === "planet" && galaxyId && starId) {
+          navigate(`/galaxy/${galaxyId}/star/${starId}`);
+        } else if (view === "solarSystem" && galaxyId) {
+          navigate(`/galaxy/${galaxyId}`);
+        }
+      },
     };
 
     const handleKeyPress = createKeyboardListener(handlers);
@@ -392,8 +413,10 @@ function SceneContent({
           onPlanetHover={onPlanetHover}
           onStarHover={onStarHover}
         />
-      ) : (
+      ) : view === "planet" ? (
         <PlanetView onPlanetHover={onPlanetHover} />
+      ) : (
+        <SurfaceView onPlanetHover={onPlanetHover} />
       )}
 
       <EffectComposer>

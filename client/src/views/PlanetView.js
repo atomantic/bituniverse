@@ -36,17 +36,22 @@ function Planet({ planetData, isSelected = true }) {
           color="#ffffff"
         />
       </group>
+      <directionalLight position={[-5, 3, 5]} intensity={1.5} />
       <group renderOrder={1}>
         <ProceduralPlanet
           radius={planetData.size * 5}
           seed={planetData.seed}
           color={planetData.color}
           type={planetData.type}
+          planetTypeConfig={planetData.planetTypeConfig}
           hasAtmosphere={planetData.hasAtmosphere}
           atmosphereOpacity={planetData.atmosphereOpacity}
+          atmosphereColor={planetData.atmosphereColor}
           metalness={planetData.metalness}
           roughness={planetData.roughness}
           terrainExaggeration={planetData.terrainExaggeration}
+          rotationSpeed={planetData.rotationSpeed}
+          detail={64}
           isSelected={isSelected}
         />
       </group>
@@ -74,11 +79,13 @@ export default function PlanetView({ onPlanetHover }) {
     color: color.getHex(),
     hasAtmosphere: planetType.hasAtmosphere,
     atmosphereOpacity: planetType.atmosphereOpacity,
+    atmosphereColor: planetType.atmosphereColor,
     metalness: planetType.metalness,
     roughness: planetType.roughness,
     terrainExaggeration: planetType.terrainExaggeration,
     distance: 40 + (parseInt(planetSeed.slice(-2), 10) % 60),
     rotationSpeed: 0.1 + (parseInt(planetSeed.slice(-3), 10) % 20) / 100,
+    planetTypeConfig: planetType,
   };
 
   // Set the planet as selected when the view is mounted

@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { Box, Typography, Paper } from "@mui/material";
 import { STAR_TYPES, KEYS_PER_GALAXY, TOTAL_KEYS } from "../utils/constants";
+import { generateGalaxyName } from "../utils/galaxyNames";
 
 export default function GalaxyInfoPanel({ selectedBody }) {
   if (!selectedBody || selectedBody.type !== "galaxy") return null;
@@ -13,6 +14,9 @@ export default function GalaxyInfoPanel({ selectedBody }) {
   const starType = STAR_TYPES[selectedBody.class || "G"];
   const keyspacePosition =
     Number(startKey.toString()) / Number(TOTAL_KEYS.toString());
+
+  const totalGalaxies = Number(TOTAL_KEYS / KEYS_PER_GALAXY);
+  const galaxyName = generateGalaxyName(galaxyIndex);
 
   return (
     <Paper
@@ -28,8 +32,11 @@ export default function GalaxyInfoPanel({ selectedBody }) {
         animation: "fadeIn 0.3s ease-out",
       }}
     >
-      <Typography variant="h6" sx={{ color: "var(--theme-secondary)", mb: 2 }}>
-        Galaxy Information
+      <Typography variant="h6" sx={{ color: "var(--theme-secondary)", mb: 0.5 }}>
+        {galaxyName}
+      </Typography>
+      <Typography variant="body2" sx={{ color: "var(--theme-accent)", mb: 2, fontSize: "0.75rem" }}>
+        Galaxy {galaxyIndex.toLocaleString()} of {totalGalaxies.toLocaleString()}
       </Typography>
       <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
@@ -72,7 +79,7 @@ export default function GalaxyInfoPanel({ selectedBody }) {
           Planets:
         </Typography>
         <Typography variant="body2" sx={{ color: "var(--theme-text)" }}>
-          1000,000,000,000
+          1,000,000,000,000
         </Typography>
         <Typography
           variant="body2"

@@ -28,7 +28,10 @@ export default function ControlsOverlay({ isVisible }) {
         Arrow Keys - Navigate Galaxies
       </Typography>
       <Typography variant="body2" sx={{ color: "var(--theme-text)" }}>
-        Enter/Space/Click - Jump into Selection
+        Enter/Space - Zoom Into Selection
+      </Typography>
+      <Typography variant="body2" sx={{ color: "var(--theme-text)" }}>
+        Escape/Backspace - Zoom Out
       </Typography>
       <Typography variant="body2" sx={{ color: "var(--theme-text)" }}>
         Mouse - Select System

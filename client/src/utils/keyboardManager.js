@@ -7,6 +7,8 @@ export const KEYBOARD_ACTIONS = {
   RANDOM_JUMP: "RANDOM_JUMP",
   ZOOM_TO_CENTER: "ZOOM_TO_CENTER",
   RESET_CAMERA: "RESET_CAMERA",
+  ZOOM_IN: "ZOOM_IN",
+  ZOOM_OUT: "ZOOM_OUT",
 };
 
 // Keyboard shortcut configuration
@@ -18,6 +20,8 @@ export const KEYBOARD_SHORTCUTS = {
   [KEYBOARD_ACTIONS.RANDOM_JUMP]: ["j"],
   [KEYBOARD_ACTIONS.ZOOM_TO_CENTER]: ["m"],
   [KEYBOARD_ACTIONS.RESET_CAMERA]: ["o"],
+  [KEYBOARD_ACTIONS.ZOOM_IN]: ["enter", " "],
+  [KEYBOARD_ACTIONS.ZOOM_OUT]: ["escape", "backspace"],
 };
 
 // Action handlers type
