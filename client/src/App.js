@@ -42,8 +42,16 @@ const darkTheme = createTheme({
   typography: { fontFamily: '"Roboto Mono", monospace' },
 });
 
-// Base path prefix for planet deep-zoom
+// Deep zoom path built incrementally
 const P = "/galaxy/:galaxyId/star/:starId/planet/:planetId";
+const D1 = `${P}/region/:regionId`;
+const D2 = `${D1}/sector/:sectorId`;
+const D3 = `${D2}/area/:areaId`;
+const D4 = `${D3}/ground/:groundId`;
+const D5 = `${D4}/grain/:grainId`;
+const D6 = `${D5}/molecule/:moleculeId`;
+const D7 = `${D6}/atom/:atomId`;
+const D8 = `${D7}/quark/:quarkId`;
 
 function AppContent() {
   const [baseKeyOffset, setBaseKeyOffset] = useState(0);
@@ -69,50 +77,17 @@ function AppContent() {
           <Routes>
             <Route path="/" element={<Scene {...sceneProps} />} />
             <Route path="/galaxy/:galaxyId" element={<Scene {...sceneProps} />} />
-            <Route
-              path="/galaxy/:galaxyId/star/:starId"
-              element={<Scene {...sceneProps} view="solarSystem" />}
-            />
-            <Route
-              path={`${P}`}
-              element={<Scene {...sceneProps} view="planet" />}
-            />
-            <Route
-              path={`${P}/globe/:continentId`}
-              element={<Scene {...sceneProps} view="globe" />}
-            />
-            <Route
-              path={`${P}/globe/:continentId/region/:regionId`}
-              element={<Scene {...sceneProps} view="continent" />}
-            />
-            <Route
-              path={`${P}/globe/:continentId/region/:regionId/area/:areaId`}
-              element={<Scene {...sceneProps} view="region" />}
-            />
-            <Route
-              path={`${P}/globe/:continentId/region/:regionId/area/:areaId/ground/:groundId`}
-              element={<Scene {...sceneProps} view="area" />}
-            />
-            <Route
-              path={`${P}/globe/:continentId/region/:regionId/area/:areaId/ground/:groundId/grain/:grainId`}
-              element={<Scene {...sceneProps} view="ground" />}
-            />
-            <Route
-              path={`${P}/globe/:continentId/region/:regionId/area/:areaId/ground/:groundId/grain/:grainId/molecule/:moleculeId`}
-              element={<Scene {...sceneProps} view="grain" />}
-            />
-            <Route
-              path={`${P}/globe/:continentId/region/:regionId/area/:areaId/ground/:groundId/grain/:grainId/molecule/:moleculeId/atom/:atomId`}
-              element={<Scene {...sceneProps} view="molecule" />}
-            />
-            <Route
-              path={`${P}/globe/:continentId/region/:regionId/area/:areaId/ground/:groundId/grain/:grainId/molecule/:moleculeId/atom/:atomId/quark/:quarkId`}
-              element={<Scene {...sceneProps} view="atom" />}
-            />
-            <Route
-              path={`${P}/globe/:continentId/region/:regionId/area/:areaId/ground/:groundId/grain/:grainId/molecule/:moleculeId/atom/:atomId/quark/:quarkId/string/:stringId`}
-              element={<Scene {...sceneProps} view="quark" />}
-            />
+            <Route path="/galaxy/:galaxyId/star/:starId" element={<Scene {...sceneProps} view="solarSystem" />} />
+            <Route path={P} element={<Scene {...sceneProps} view="planet" />} />
+            <Route path={D1} element={<Scene {...sceneProps} view="map" />} />
+            <Route path={D2} element={<Scene {...sceneProps} view="sector" />} />
+            <Route path={D3} element={<Scene {...sceneProps} view="region" />} />
+            <Route path={D4} element={<Scene {...sceneProps} view="area" />} />
+            <Route path={D5} element={<Scene {...sceneProps} view="ground" />} />
+            <Route path={D6} element={<Scene {...sceneProps} view="grain" />} />
+            <Route path={D7} element={<Scene {...sceneProps} view="molecule" />} />
+            <Route path={D8} element={<Scene {...sceneProps} view="atom" />} />
+            <Route path={`${D8}/string/:stringId`} element={<Scene {...sceneProps} view="quark" />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Router>

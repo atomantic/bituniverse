@@ -76,7 +76,6 @@ function Grains({ seedVal, onGrainHover, onGrainClick }) {
       dummy.scale.set(scale, scale, scale);
       dummy.updateMatrix();
       meshRef.current.setMatrixAt(i, dummy.matrix);
-
       const variation = (hashString(`${seedVal}c${i}`) % 100) / 500;
       meshRef.current.setColorAt(i, new THREE.Color(0.77 + variation, 0.66 + variation, 0.48 + variation));
     }
@@ -119,9 +118,9 @@ function Grains({ seedVal, onGrainHover, onGrainClick }) {
 
 export default function GroundView({ onGrainHover }) {
   const params = useParams();
-  const { galaxyId, starId, planetId, continentId, regionId, areaId, groundId } = params;
+  const { galaxyId, starId, planetId, regionId, sectorId, areaId, groundId } = params;
   const navigate = useNavigate();
-  const seed = `${galaxyId}${starId}${planetId}c${continentId}r${regionId}a${areaId}g${groundId}`;
+  const seed = `${galaxyId}${starId}${planetId}r${regionId}s${sectorId}a${areaId}g${groundId}`;
   const seedVal = hashString(seed);
 
   const handleGrainHover = useCallback(
@@ -136,25 +135,15 @@ export default function GroundView({ onGrainHover }) {
   const handleGrainClick = useCallback(
     (idx) => {
       navigate(
-        `/galaxy/${galaxyId}/star/${starId}/planet/${planetId}/globe/${continentId}/region/${regionId}/area/${areaId}/ground/${groundId}/grain/${idx}`
+        `/galaxy/${galaxyId}/star/${starId}/planet/${planetId}/region/${regionId}/sector/${sectorId}/area/${areaId}/ground/${groundId}/grain/${idx}`
       );
     },
-    [navigate, galaxyId, starId, planetId, continentId, regionId, areaId, groundId]
+    [navigate, galaxyId, starId, planetId, regionId, sectorId, areaId, groundId]
   );
 
   return (
     <>
-      <OrbitControls
-        {...ORBIT_CONTROLS}
-        minDistance={2}
-        maxDistance={80}
-        target={[0, 0, 0]}
-        enableZoom
-        enablePan
-        enableRotate
-        zoomSpeed={1.5}
-        dampingFactor={0.05}
-      />
+      <OrbitControls {...ORBIT_CONTROLS} minDistance={2} maxDistance={80} target={[0, 0, 0]} enableZoom enablePan enableRotate zoomSpeed={1.5} dampingFactor={0.05} />
       <ambientLight intensity={0.5} />
       <directionalLight position={[-5, 8, 5]} intensity={1.4} castShadow />
       <pointLight position={[0, 10, 0]} intensity={0.3} color="#fff4ea" />

@@ -24,19 +24,19 @@ function fbm2D(x, y, seed, octaves = 6) {
 
 // Route path builders for each level
 const ROUTE_BUILDERS = {
-  continent: (params, childIdx) =>
-    `/galaxy/${params.galaxyId}/star/${params.starId}/planet/${params.planetId}/globe/${params.continentId}/region/${childIdx}`,
-  region: (params, childIdx) =>
-    `/galaxy/${params.galaxyId}/star/${params.starId}/planet/${params.planetId}/globe/${params.continentId}/region/${params.regionId}/area/${childIdx}`,
+  sector: (params, childIdx) =>
+    `/galaxy/${params.galaxyId}/star/${params.starId}/planet/${params.planetId}/region/${params.regionId}/sector/${params.sectorId}/area/${childIdx}`,
   area: (params, childIdx) =>
-    `/galaxy/${params.galaxyId}/star/${params.starId}/planet/${params.planetId}/globe/${params.continentId}/region/${params.regionId}/area/${params.areaId}/ground/${childIdx}`,
+    `/galaxy/${params.galaxyId}/star/${params.starId}/planet/${params.planetId}/region/${params.regionId}/sector/${params.sectorId}/area/${params.areaId}/ground/${childIdx}`,
+  ground: (params, childIdx) =>
+    `/galaxy/${params.galaxyId}/star/${params.starId}/planet/${params.planetId}/region/${params.regionId}/sector/${params.sectorId}/area/${params.areaId}/ground/${params.groundId}/grain/${childIdx}`,
 };
 
 // Seed builders for each level
 const SEED_BUILDERS = {
-  continent: (params) => `${params.galaxyId}${params.starId}${params.planetId}c${params.continentId}`,
-  region: (params) => `${params.galaxyId}${params.starId}${params.planetId}c${params.continentId}r${params.regionId}`,
-  area: (params) => `${params.galaxyId}${params.starId}${params.planetId}c${params.continentId}r${params.regionId}a${params.areaId}`,
+  sector: (params) => `${params.galaxyId}${params.starId}${params.planetId}r${params.regionId}s${params.sectorId}`,
+  area: (params) => `${params.galaxyId}${params.starId}${params.planetId}r${params.regionId}s${params.sectorId}a${params.areaId}`,
+  ground: (params) => `${params.galaxyId}${params.starId}${params.planetId}r${params.regionId}s${params.sectorId}a${params.areaId}g${params.groundId}`,
 };
 
 export default function TerrainTileView({

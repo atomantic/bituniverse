@@ -23,10 +23,10 @@ import {
   PlanetHoverWidget,
 } from "./components/PlanetInfoPanel";
 import {
-  GlobeWidget,
-  ContinentWidget,
-  RegionWidget,
-  AreaWidget,
+  MapWidget,
+  SectorWidget,
+  RegionWidget as RegionInfoWidget,
+  AreaWidget as AreaInfoWidget,
   GroundWidget,
   GrainWidget,
   MoleculeWidget,
@@ -59,40 +59,24 @@ import {
 } from "./utils/keyspaceHierarchy";
 
 // Ordered list of deep-zoom view names (after planet)
-const DEEP_VIEWS = ["globe", "continent", "region", "area", "ground", "grain", "molecule", "atom", "quark"];
+const DEEP_VIEWS = ["map", "sector", "region", "area", "ground", "grain", "molecule", "atom", "quark"];
 
-// Map from view name to the param that identifies the hovered/selected child
-const VIEW_CHILD_PARAMS = {
-  globe: "continentId",
-  continent: "regionId",
-  region: "areaId",
-  area: "groundId",
-  ground: "grainId",
-  grain: "moleculeId",
-  molecule: "atomId",
-  atom: "quarkId",
-  quark: "stringId",
-};
+// URL segment names for each deep level (used in path building)
+const URL_SEGMENTS = ["region", "sector", "area", "ground", "grain", "molecule", "atom", "quark", "string"];
+
+// Param names at each deep level
+const PARAM_NAMES = ["regionId", "sectorId", "areaId", "groundId", "grainId", "moleculeId", "atomId", "quarkId", "stringId"];
 
 // Build a URL path from params up to a given view level
 function buildPath(params, upToView) {
-  const { galaxyId, starId, planetId, continentId, regionId, areaId, groundId, grainId, moleculeId, atomId, quarkId, stringId } = params;
+  const { galaxyId, starId, planetId } = params;
   let path = `/galaxy/${galaxyId}/star/${starId}/planet/${planetId}`;
-  const segments = [
-    ["globe", continentId, "globe"],
-    ["continent", regionId, "region"],
-    ["region", areaId, "area"],
-    ["area", groundId, "ground"],
-    ["ground", grainId, "grain"],
-    ["grain", moleculeId, "molecule"],
-    ["molecule", atomId, "atom"],
-    ["atom", quarkId, "quark"],
-    ["quark", stringId, "string"],
-  ];
-  for (const [viewName, paramVal, segmentName] of segments) {
+  const deepIdx = DEEP_VIEWS.indexOf(upToView);
+  if (deepIdx < 0) return path;
+  for (let i = 0; i <= deepIdx; i++) {
+    const paramVal = params[PARAM_NAMES[i]];
     if (paramVal == null) break;
-    path += `/${segmentName}/${paramVal}`;
-    if (viewName === upToView) break;
+    path += `/${URL_SEGMENTS[i]}/${paramVal}`;
   }
   return path;
 }
@@ -134,8 +118,7 @@ function SceneContent({
       if (galaxyIndex >= totalGalaxies) {
         wrappedIndex = galaxyIndex % totalGalaxies;
       } else if (galaxyIndex < 0) {
-        wrappedIndex =
-          ((galaxyIndex % totalGalaxies) + totalGalaxies) % totalGalaxies;
+        wrappedIndex = ((galaxyIndex % totalGalaxies) + totalGalaxies) % totalGalaxies;
       }
       onKeyOffsetChange(wrappedIndex);
       if (wrappedIndex !== galaxyIndex) {
@@ -165,41 +148,29 @@ function SceneContent({
   // Keyboard navigation
   useEffect(() => {
     const totalGalaxies = Number(TOTAL_KEYS / KEYS_PER_GALAXY);
-    const wrapIndex = (index, max) =>
-      index < 0 ? max + (index % max) : index % max;
-
-    // Find the current deep-zoom level index
+    const wrapIndex = (index, max) => index < 0 ? max + (index % max) : index % max;
     const deepIdx = DEEP_VIEWS.indexOf(view);
-
-    // Get the visible count for the current level for left/right nav
     const levelDef = deepIdx >= 0 ? DEEP_ZOOM_LEVELS[deepIdx] : null;
     const visibleCount = levelDef?.visible ?? 0;
 
-    // Get current ID param for the current view level
-    const currentParam = deepIdx >= 0 ? VIEW_CHILD_PARAMS[DEEP_VIEWS[deepIdx - 1]] : null;
-    const currentId = currentParam ? parseInt(params[currentParam], 10) : 0;
-
     const handlers = {
-      [KEYBOARD_ACTIONS.TOGGLE_CONTROLS]: () =>
-        setIsControlsVisible((prev) => !prev),
+      [KEYBOARD_ACTIONS.TOGGLE_CONTROLS]: () => setIsControlsVisible((prev) => !prev),
       [KEYBOARD_ACTIONS.TOGGLE_INFO]: () => setIsInfoVisible((prev) => !prev),
       [KEYBOARD_ACTIONS.NAVIGATE_LEFT]: () => {
         if (deepIdx > 0) {
-          // Navigate to sibling at the current level
-          const paramName = VIEW_CHILD_PARAMS[DEEP_VIEWS[deepIdx - 1]];
+          const paramName = PARAM_NAMES[deepIdx];
           const curVal = parseInt(params[paramName], 10);
           const parentPath = buildPath(params, DEEP_VIEWS[deepIdx - 1]);
-          // Go up one segment and replace with prev sibling
-          const pathParts = parentPath.split("/");
-          pathParts[pathParts.length - 1] = wrapIndex(curVal - 1, visibleCount).toString();
-          navigate(pathParts.join("/"), { replace: true });
+          navigate(`${parentPath}/${URL_SEGMENTS[deepIdx]}/${wrapIndex(curVal - 1, visibleCount)}`, { replace: true });
+        } else if (view === "map") {
+          const curVal = parseInt(params.regionId, 10);
+          const basePath = `/galaxy/${galaxyId}/star/${starId}/planet/${planetId}`;
+          navigate(`${basePath}/region/${wrapIndex(curVal - 1, 49)}`, { replace: true });
         } else if (view === "planet") {
-          const cur = parseInt(planetId, 10);
-          const next = wrapIndex(cur - 1, 10);
+          const next = wrapIndex(parseInt(planetId, 10) - 1, 10);
           navigate(`/galaxy/${galaxyId}/star/${starId}/planet/${next}`, { replace: true });
         } else if (view === "solarSystem") {
-          const cur = parseInt(starId, 10);
-          const next = wrapIndex(cur - 1, 100000000000);
+          const next = wrapIndex(parseInt(starId, 10) - 1, 100000000000);
           navigate(`/galaxy/${galaxyId}/star/${next}`, { replace: true });
         } else {
           const next = wrapIndex(baseKeyOffset - 1, totalGalaxies);
@@ -209,19 +180,19 @@ function SceneContent({
       },
       [KEYBOARD_ACTIONS.NAVIGATE_RIGHT]: () => {
         if (deepIdx > 0) {
-          const paramName = VIEW_CHILD_PARAMS[DEEP_VIEWS[deepIdx - 1]];
+          const paramName = PARAM_NAMES[deepIdx];
           const curVal = parseInt(params[paramName], 10);
           const parentPath = buildPath(params, DEEP_VIEWS[deepIdx - 1]);
-          const pathParts = parentPath.split("/");
-          pathParts[pathParts.length - 1] = wrapIndex(curVal + 1, visibleCount).toString();
-          navigate(pathParts.join("/"), { replace: true });
+          navigate(`${parentPath}/${URL_SEGMENTS[deepIdx]}/${wrapIndex(curVal + 1, visibleCount)}`, { replace: true });
+        } else if (view === "map") {
+          const curVal = parseInt(params.regionId, 10);
+          const basePath = `/galaxy/${galaxyId}/star/${starId}/planet/${planetId}`;
+          navigate(`${basePath}/region/${wrapIndex(curVal + 1, 49)}`, { replace: true });
         } else if (view === "planet") {
-          const cur = parseInt(planetId, 10);
-          const next = wrapIndex(cur + 1, 10);
+          const next = wrapIndex(parseInt(planetId, 10) + 1, 10);
           navigate(`/galaxy/${galaxyId}/star/${starId}/planet/${next}`, { replace: true });
         } else if (view === "solarSystem") {
-          const cur = parseInt(starId, 10);
-          const next = wrapIndex(cur + 1, 100000000000);
+          const next = wrapIndex(parseInt(starId, 10) + 1, 100000000000);
           navigate(`/galaxy/${galaxyId}/star/${next}`, { replace: true });
         } else {
           const next = wrapIndex(baseKeyOffset + 1, totalGalaxies);
@@ -239,12 +210,9 @@ function SceneContent({
         const controls = controlsRef.current;
         const galaxyIndex = parseInt(baseKeyOffset, 10);
         const position = getGalaxyPosition(galaxyIndex);
-        const distance = 50;
         controls.target.set(position[0], position[1], position[2]);
         const startPosition = camera.position.clone();
-        const endPosition = new THREE.Vector3(
-          position[0] + distance, position[1] + distance, position[2] + distance
-        );
+        const endPosition = new THREE.Vector3(position[0] + 50, position[1] + 50, position[2] + 50);
         const duration = 1000;
         const startTime = Date.now();
         function animate() {
@@ -276,17 +244,12 @@ function SceneContent({
         animate();
       },
       [KEYBOARD_ACTIONS.ZOOM_IN]: () => {
-        if (deepIdx >= 0 && hoveredChild !== null) {
-          // Navigate into the hovered child at the next deep level
+        if (deepIdx >= 0 && deepIdx < DEEP_VIEWS.length - 1 && hoveredChild !== null) {
           const currentPath = buildPath(params, view);
-          const nextSegment = DEEP_ZOOM_LEVELS[deepIdx]?.param;
-          if (nextSegment) {
-            // Map param name to URL segment name
-            const segName = nextSegment.replace("Id", "");
-            navigate(`${currentPath}/${segName}/${hoveredChild}`);
-          }
+          const nextSeg = URL_SEGMENTS[deepIdx + 1];
+          navigate(`${currentPath}/${nextSeg}/${hoveredChild}`);
         } else if (view === "planet" && galaxyId && starId && planetId) {
-          navigate(`/galaxy/${galaxyId}/star/${starId}/planet/${planetId}/globe/0`);
+          navigate(`/galaxy/${galaxyId}/star/${starId}/planet/${planetId}/region/0`);
         } else if (view === "solarSystem" && galaxyId && starId) {
           navigate(`/galaxy/${galaxyId}/star/${starId}/planet/0`);
         } else if (view === "galaxy" && galaxyId) {
@@ -295,10 +258,8 @@ function SceneContent({
       },
       [KEYBOARD_ACTIONS.ZOOM_OUT]: () => {
         if (deepIdx > 0) {
-          // Go up one level
-          const parentView = DEEP_VIEWS[deepIdx - 1];
-          navigate(buildPath(params, parentView));
-        } else if (view === "globe") {
+          navigate(buildPath(params, DEEP_VIEWS[deepIdx - 1]));
+        } else if (view === "map") {
           navigate(`/galaxy/${galaxyId}/star/${starId}/planet/${planetId}`);
         } else if (view === "planet" && galaxyId && starId) {
           navigate(`/galaxy/${galaxyId}/star/${starId}`);
@@ -311,11 +272,7 @@ function SceneContent({
     const handleKeyPress = createKeyboardListener(handlers);
     window.addEventListener("keydown", handleKeyPress);
     return () => window.removeEventListener("keydown", handleKeyPress);
-  }, [
-    baseKeyOffset, onKeyOffsetChange, navigate, camera,
-    setIsControlsVisible, setIsInfoVisible, onGalaxySelect,
-    view, params, hoveredChild,
-  ]);
+  }, [baseKeyOffset, onKeyOffsetChange, navigate, camera, setIsControlsVisible, setIsInfoVisible, onGalaxySelect, view, params, hoveredChild, galaxyId, starId, planetId]);
 
   return (
     <>
@@ -356,15 +313,15 @@ function SceneContent({
       ) : view === "solarSystem" ? (
         <SolarSystemView onPlanetHover={onPlanetHover} onStarHover={onStarHover} />
       ) : view === "planet" ? (
-        <PlanetView onPlanetHover={onPlanetHover} />
-      ) : view === "globe" ? (
-        <GlobeView onContinentHover={onDeepHover} />
-      ) : view === "continent" ? (
-        <ContinentView onRegionHover={onDeepHover} />
+        <PlanetView onPlanetHover={onPlanetHover} onRegionHover={onDeepHover} />
+      ) : view === "map" ? (
+        <GlobeView onSectorHover={onDeepHover} />
+      ) : view === "sector" ? (
+        <ContinentView onChildHover={onDeepHover} />
       ) : view === "region" ? (
-        <RegionView onAreaHover={onDeepHover} />
+        <RegionView onChildHover={onDeepHover} />
       ) : view === "area" ? (
-        <AreaView onGroundHover={onDeepHover} />
+        <AreaView onChildHover={onDeepHover} />
       ) : view === "ground" ? (
         <GroundView onGrainHover={onDeepHover} />
       ) : view === "grain" ? (
@@ -397,7 +354,7 @@ function SceneContent({
 // Main Scene component with HUD dashboard layout
 function Scene({ baseKeyOffset, onKeyOffsetChange, view = "galaxy" }) {
   const params = useParams();
-  const { galaxyId, starId, planetId, continentId, regionId, areaId, groundId, grainId, moleculeId, atomId, quarkId, stringId } = params;
+  const { galaxyId, starId, planetId, regionId, sectorId, areaId, groundId, grainId, moleculeId, atomId, quarkId, stringId } = params;
   const [isControlsVisible, setIsControlsVisible] = useState(false);
   const [isInfoVisible, setIsInfoVisible] = useState(true);
   const [selectedBody, setSelectedBody] = useState(null);
@@ -406,7 +363,6 @@ function Scene({ baseKeyOffset, onKeyOffsetChange, view = "galaxy" }) {
   const [hoveredChild, setHoveredChild] = useState(null);
   const [hoveredString, setHoveredString] = useState(null);
 
-  // Unified deep hover handler
   const handleDeepHover = useCallback((idx) => {
     setHoveredChild(idx);
     if (view === "quark") setHoveredString(idx);
@@ -442,15 +398,15 @@ function Scene({ baseKeyOffset, onKeyOffsetChange, view = "galaxy" }) {
 
     // Deep zoom breadcrumbs
     const deepLevels = [
-      { view: "globe",     id: continentId, label: `Zone ${continentId}`,     segment: "globe" },
-      { view: "continent", id: regionId,    label: `Region ${regionId}`,      segment: "region" },
-      { view: "region",    id: areaId,      label: `Area ${areaId}`,          segment: "area" },
-      { view: "area",      id: groundId,    label: `Ground ${groundId}`,      segment: "ground" },
-      { view: "ground",    id: grainId,     label: `Grain ${grainId}`,        segment: "grain" },
-      { view: "grain",     id: moleculeId,  label: `Molecule ${moleculeId}`,  segment: "molecule" },
-      { view: "molecule",  id: atomId,      label: `Atom ${atomId}`,          segment: "atom" },
-      { view: "atom",      id: quarkId,     label: `Quark ${quarkId}`,        segment: "quark" },
-      { view: "quark",     id: stringId,    label: `String ${stringId}`,      segment: "string" },
+      { view: "map",      id: regionId,   label: `Region ${regionId}` },
+      { view: "sector",   id: sectorId,   label: `Sector ${sectorId}` },
+      { view: "region",   id: areaId,     label: `Area ${areaId}` },
+      { view: "area",     id: groundId,   label: `Ground ${groundId}` },
+      { view: "ground",   id: grainId,    label: `Grain ${grainId}` },
+      { view: "grain",    id: moleculeId, label: `Molecule ${moleculeId}` },
+      { view: "molecule", id: atomId,     label: `Atom ${atomId}` },
+      { view: "atom",     id: quarkId,    label: `Quark ${quarkId}` },
+      { view: "quark",    id: stringId,   label: `String ${stringId}` },
     ];
 
     const deepIdx = DEEP_VIEWS.indexOf(view);
@@ -467,28 +423,22 @@ function Scene({ baseKeyOffset, onKeyOffsetChange, view = "galaxy" }) {
     }
 
     return items;
-  }, [view, params, galaxyId, starId, planetId, continentId, regionId, areaId, groundId, grainId, moleculeId, atomId, quarkId, stringId]);
+  }, [view, params, galaxyId, starId, planetId, regionId, sectorId, areaId, groundId, grainId, moleculeId, atomId, quarkId, stringId]);
 
-  // Keyspace position
   const totalGalaxies = Number(TOTAL_KEYS / KEYS_PER_GALAXY);
   const keyspacePosition = (parseInt(baseKeyOffset, 10) / totalGalaxies) * 100;
 
-  // Hex key for quark view
   const hoveredHexKey = useMemo(() => {
     if (view !== "quark" || hoveredString === null) return null;
     return computeHexKey(
-      galaxyId, starId, planetId, continentId, regionId, areaId,
+      galaxyId, starId, planetId, regionId, sectorId, areaId,
       groundId, grainId, moleculeId, atomId, quarkId, hoveredString
     );
-  }, [view, hoveredString, galaxyId, starId, planetId, continentId, regionId, areaId, groundId, grainId, moleculeId, atomId, quarkId]);
+  }, [view, hoveredString, galaxyId, starId, planetId, regionId, sectorId, areaId, groundId, grainId, moleculeId, atomId, quarkId]);
 
   const handleStarSelect = useCallback((star) => {
-    if (star) {
-      setSelectedStar(star);
-      setSelectedPlanet(null);
-    }
+    if (star) { setSelectedStar(star); setSelectedPlanet(null); }
   }, []);
-
   const handlePlanetSelect = useCallback((planet) => {
     if (planet) setSelectedPlanet(planet);
   }, []);
@@ -496,11 +446,7 @@ function Scene({ baseKeyOffset, onKeyOffsetChange, view = "galaxy" }) {
   return (
     <Box sx={{ position: "relative", width: "100%", height: "100%" }}>
       <Canvas
-        camera={
-          view === "galaxy"
-            ? CAMERA
-            : { position: [0, 0, 20], fov: 75, near: 0.1, far: 10000 }
-        }
+        camera={view === "galaxy" ? CAMERA : { position: [0, 0, 20], fov: 75, near: 0.1, far: 10000 }}
         gl={{ antialias: true, logarithmicDepthBuffer: true }}
         style={{ position: "absolute", inset: 0, background: "#000" }}
       >
@@ -521,63 +467,30 @@ function Scene({ baseKeyOffset, onKeyOffsetChange, view = "galaxy" }) {
       </Canvas>
 
       {/* HUD Overlay */}
-      <Box
-        sx={{
-          position: "absolute",
-          inset: 0,
-          pointerEvents: "none",
-          display: "flex",
-          flexDirection: "column",
-        }}
-      >
+      <Box sx={{ position: "absolute", inset: 0, pointerEvents: "none", display: "flex", flexDirection: "column" }}>
         {/* Top Bar */}
-        <Box
-          sx={{
-            pointerEvents: "auto",
-            height: 36,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            px: 1.5,
-            background: "linear-gradient(180deg, rgba(10, 6, 30, 0.85) 0%, rgba(10, 6, 30, 0) 100%)",
-            borderBottom: "1px solid rgba(77, 244, 255, 0.06)",
-          }}
-        >
+        <Box sx={{
+          pointerEvents: "auto", height: 36, display: "flex", alignItems: "center", justifyContent: "space-between", px: 1.5,
+          background: "linear-gradient(180deg, rgba(10, 6, 30, 0.85) 0%, rgba(10, 6, 30, 0) 100%)",
+          borderBottom: "1px solid rgba(77, 244, 255, 0.06)",
+        }}>
           <BreadcrumbNav items={breadcrumbs} />
-          <Typography
-            sx={{
-              color: "var(--theme-secondary)",
-              fontSize: "0.6rem",
-              letterSpacing: "0.3em",
-              textTransform: "uppercase",
-              opacity: 0.5,
-            }}
-          >
+          <Typography sx={{ color: "var(--theme-secondary)", fontSize: "0.6rem", letterSpacing: "0.3em", textTransform: "uppercase", opacity: 0.5 }}>
             BITUNIVERSE
           </Typography>
         </Box>
 
         {/* Middle: Widget Columns */}
         <Box sx={{ flex: 1, display: "flex", overflow: "hidden" }}>
-          {/* Left Column */}
           {isInfoVisible && (
-            <Box
-              sx={{
-                width: 220,
-                display: "flex",
-                flexDirection: "column",
-                gap: 0.75,
-                p: 0.75,
-                pointerEvents: "auto",
-              }}
-            >
+            <Box sx={{ width: 220, display: "flex", flexDirection: "column", gap: 0.75, p: 0.75, pointerEvents: "auto" }}>
               {view === "galaxy" && <GalaxyLocationWidget selectedBody={selectedBody} />}
               {view === "solarSystem" && selectedStar && <StarInfoWidget selectedStar={selectedStar} />}
               {view === "planet" && selectedPlanet && <PlanetOverviewWidget selectedPlanet={selectedPlanet} />}
-              {view === "globe" && <GlobeWidget continentId={continentId} hoveredChild={hoveredChild} />}
-              {view === "continent" && <ContinentWidget regionId={regionId} hoveredChild={hoveredChild} />}
-              {view === "region" && <RegionWidget areaId={areaId} hoveredChild={hoveredChild} />}
-              {view === "area" && <AreaWidget groundId={groundId} hoveredChild={hoveredChild} />}
+              {view === "map" && <MapWidget regionId={regionId} hoveredChild={hoveredChild} />}
+              {view === "sector" && <SectorWidget sectorId={sectorId} hoveredChild={hoveredChild} />}
+              {view === "region" && <RegionInfoWidget areaId={areaId} hoveredChild={hoveredChild} />}
+              {view === "area" && <AreaInfoWidget groundId={groundId} hoveredChild={hoveredChild} />}
               {view === "ground" && <GroundWidget grainId={grainId} hoveredChild={hoveredChild} />}
               {view === "grain" && <GrainWidget moleculeId={moleculeId} hoveredChild={hoveredChild} />}
               {view === "molecule" && <MoleculeWidget atomId={atomId} hoveredChild={hoveredChild} />}
@@ -585,21 +498,9 @@ function Scene({ baseKeyOffset, onKeyOffsetChange, view = "galaxy" }) {
               {view === "quark" && <QuarkWidget stringId={stringId} hexKey={hoveredHexKey} />}
             </Box>
           )}
-
           <Box sx={{ flex: 1 }} />
-
-          {/* Right Column */}
           {isInfoVisible && (
-            <Box
-              sx={{
-                width: 220,
-                display: "flex",
-                flexDirection: "column",
-                gap: 0.75,
-                p: 0.75,
-                pointerEvents: "auto",
-              }}
-            >
+            <Box sx={{ width: 220, display: "flex", flexDirection: "column", gap: 0.75, p: 0.75, pointerEvents: "auto" }}>
               {view === "galaxy" && <GalaxyKeyspaceWidget selectedBody={selectedBody} />}
               {view === "solarSystem" && selectedPlanet && <PlanetHoverWidget selectedPlanet={selectedPlanet} />}
               {view === "planet" && selectedPlanet && <PlanetDetailWidget selectedPlanet={selectedPlanet} />}
@@ -608,67 +509,26 @@ function Scene({ baseKeyOffset, onKeyOffsetChange, view = "galaxy" }) {
         </Box>
 
         {/* Bottom Bar */}
-        <Box
-          sx={{
-            pointerEvents: "auto",
-            height: 32,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            px: 1.5,
-            background: "linear-gradient(0deg, rgba(10, 6, 30, 0.85) 0%, rgba(10, 6, 30, 0) 100%)",
-            borderTop: "1px solid rgba(77, 244, 255, 0.06)",
-          }}
-        >
-          <Typography
-            sx={{ color: "var(--theme-secondary)", fontSize: "0.55rem", opacity: 0.6 }}
-          >
-            256-bit Keyspace Universe
-          </Typography>
+        <Box sx={{
+          pointerEvents: "auto", height: 32, display: "flex", alignItems: "center", justifyContent: "space-between", px: 1.5,
+          background: "linear-gradient(0deg, rgba(10, 6, 30, 0.85) 0%, rgba(10, 6, 30, 0) 100%)",
+          borderTop: "1px solid rgba(77, 244, 255, 0.06)",
+        }}>
+          <Typography sx={{ color: "var(--theme-secondary)", fontSize: "0.55rem", opacity: 0.6 }}>256-bit Keyspace Universe</Typography>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
             <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              <Typography
-                sx={{ color: "var(--theme-accent)", fontSize: "0.5rem", opacity: 0.5 }}
-              >
-                Position
-              </Typography>
-              <Box
-                sx={{
-                  width: 120,
-                  height: 2,
-                  background: "rgba(77, 244, 255, 0.15)",
-                  borderRadius: 1,
-                  position: "relative",
-                }}
-              >
-                <Box
-                  sx={{
-                    position: "absolute",
-                    left: `${keyspacePosition}%`,
-                    top: "50%",
-                    transform: "translate(-50%, -50%)",
-                    width: 8,
-                    height: 8,
-                    borderRadius: "50%",
-                    background: "var(--theme-secondary)",
-                    boxShadow: "0 0 6px var(--theme-glow-secondary)",
-                  }}
-                />
+              <Typography sx={{ color: "var(--theme-accent)", fontSize: "0.5rem", opacity: 0.5 }}>Position</Typography>
+              <Box sx={{ width: 120, height: 2, background: "rgba(77, 244, 255, 0.15)", borderRadius: 1, position: "relative" }}>
+                <Box sx={{
+                  position: "absolute", left: `${keyspacePosition}%`, top: "50%", transform: "translate(-50%, -50%)",
+                  width: 8, height: 8, borderRadius: "50%", background: "var(--theme-secondary)", boxShadow: "0 0 6px var(--theme-glow-secondary)",
+                }} />
               </Box>
-              <Typography sx={{ color: "var(--theme-text)", fontSize: "0.5rem" }}>
-                {Math.round(keyspacePosition)}%
-              </Typography>
+              <Typography sx={{ color: "var(--theme-text)", fontSize: "0.5rem" }}>{Math.round(keyspacePosition)}%</Typography>
             </Box>
             <Typography
               onClick={() => setIsControlsVisible((v) => !v)}
-              sx={{
-                color: "var(--theme-accent)",
-                fontSize: "0.5rem",
-                opacity: 0.4,
-                cursor: "pointer",
-                userSelect: "none",
-                "&:hover": { opacity: 0.8 },
-              }}
+              sx={{ color: "var(--theme-accent)", fontSize: "0.5rem", opacity: 0.4, cursor: "pointer", userSelect: "none", "&:hover": { opacity: 0.8 } }}
             >
               [C] Controls
             </Typography>

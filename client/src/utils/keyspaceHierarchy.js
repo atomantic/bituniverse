@@ -5,9 +5,9 @@ export const STARS_PER_GALAXY = BigInt(1000);
 export const PLANETS_PER_STAR = BigInt(10);
 
 // 9-level deep zoom below planet: 10^7 × 8 + 10^5 = 10^61
-export const CONTINENTS_PER_PLANET = BigInt(10000000);   // 10^7
-export const REGIONS_PER_CONTINENT = BigInt(10000000);   // 10^7
-export const AREAS_PER_REGION = BigInt(10000000);        // 10^7
+export const REGIONS_PER_PLANET = BigInt(10000000);      // 10^7
+export const SECTORS_PER_REGION = BigInt(10000000);      // 10^7
+export const AREAS_PER_SECTOR = BigInt(10000000);        // 10^7
 export const GROUNDS_PER_AREA = BigInt(10000000);        // 10^7
 export const GRAINS_PER_GROUND = BigInt(10000000);       // 10^7
 export const MOLECULES_PER_GRAIN = BigInt(10000000);     // 10^7
@@ -18,9 +18,9 @@ export const STRINGS_PER_QUARK = BigInt(100000);         // 10^5
 // Derived keys-per-unit
 export const KEYS_PER_STAR = KEYS_PER_GALAXY / STARS_PER_GALAXY;
 export const KEYS_PER_PLANET = KEYS_PER_STAR / PLANETS_PER_STAR;
-export const KEYS_PER_CONTINENT = KEYS_PER_PLANET / CONTINENTS_PER_PLANET;
-export const KEYS_PER_REGION = KEYS_PER_CONTINENT / REGIONS_PER_CONTINENT;
-export const KEYS_PER_AREA = KEYS_PER_REGION / AREAS_PER_REGION;
+export const KEYS_PER_REGION = KEYS_PER_PLANET / REGIONS_PER_PLANET;
+export const KEYS_PER_SECTOR = KEYS_PER_REGION / SECTORS_PER_REGION;
+export const KEYS_PER_AREA = KEYS_PER_SECTOR / AREAS_PER_SECTOR;
 export const KEYS_PER_GROUND = KEYS_PER_AREA / GROUNDS_PER_AREA;
 export const KEYS_PER_GRAIN = KEYS_PER_GROUND / GRAINS_PER_GROUND;
 export const KEYS_PER_MOLECULE = KEYS_PER_GRAIN / MOLECULES_PER_GRAIN;
@@ -29,8 +29,8 @@ export const KEYS_PER_QUARK = KEYS_PER_ATOM / QUARKS_PER_ATOM;
 export const KEYS_PER_STRING = KEYS_PER_QUARK / STRINGS_PER_QUARK;
 
 // Visible items at each deep zoom level
-export const VISIBLE_CONTINENTS = 49;    // 7x7 lat/lon zones on globe
-export const VISIBLE_REGIONS = 400;      // 20x20 grid
+export const VISIBLE_REGIONS = 49;       // 7x7 lat/lon zones on planet
+export const VISIBLE_SECTORS = 400;      // 20x20 grid
 export const VISIBLE_AREAS = 400;        // 20x20 grid
 export const VISIBLE_GROUNDS = 400;      // 20x20 grid
 export const VISIBLE_GRAINS = 2000;      // instanced spheres
@@ -40,24 +40,25 @@ export const VISIBLE_QUARKS = 500;       // Bohr model quarks
 export const VISIBLE_STRINGS = 500;      // gluon strings = SHA-256 keys
 
 // Deep zoom level definitions (data-driven)
+// Each level: what child items it contains, and what param navigates into
 export const DEEP_ZOOM_LEVELS = [
-  { id: "globe",     label: "Globe",     param: "continentId", visible: VISIBLE_CONTINENTS,  total: CONTINENTS_PER_PLANET,  keysPerUnit: KEYS_PER_CONTINENT },
-  { id: "continent", label: "Continent", param: "regionId",    visible: VISIBLE_REGIONS,     total: REGIONS_PER_CONTINENT,  keysPerUnit: KEYS_PER_REGION },
-  { id: "region",    label: "Region",    param: "areaId",      visible: VISIBLE_AREAS,       total: AREAS_PER_REGION,       keysPerUnit: KEYS_PER_AREA },
-  { id: "area",      label: "Area",      param: "groundId",    visible: VISIBLE_GROUNDS,     total: GROUNDS_PER_AREA,       keysPerUnit: KEYS_PER_GROUND },
-  { id: "ground",    label: "Ground",    param: "grainId",     visible: VISIBLE_GRAINS,      total: GRAINS_PER_GROUND,      keysPerUnit: KEYS_PER_GRAIN },
-  { id: "grain",     label: "Grain",     param: "moleculeId",  visible: VISIBLE_MOLECULES,   total: MOLECULES_PER_GRAIN,    keysPerUnit: KEYS_PER_MOLECULE },
-  { id: "molecule",  label: "Molecule",  param: "atomId",      visible: VISIBLE_ATOMS,       total: ATOMS_PER_MOLECULE,     keysPerUnit: KEYS_PER_ATOM },
-  { id: "atom",      label: "Atom",      param: "quarkId",     visible: VISIBLE_QUARKS,      total: QUARKS_PER_ATOM,        keysPerUnit: KEYS_PER_QUARK },
-  { id: "quark",     label: "Quark",     param: "stringId",    visible: VISIBLE_STRINGS,     total: STRINGS_PER_QUARK,      keysPerUnit: KEYS_PER_STRING },
+  { id: "map",      label: "Map",      param: "regionId",   visible: VISIBLE_REGIONS,   total: REGIONS_PER_PLANET,  keysPerUnit: KEYS_PER_REGION },
+  { id: "sector",   label: "Sector",   param: "sectorId",   visible: VISIBLE_SECTORS,   total: SECTORS_PER_REGION,  keysPerUnit: KEYS_PER_SECTOR },
+  { id: "region",   label: "Area",     param: "areaId",     visible: VISIBLE_AREAS,     total: AREAS_PER_SECTOR,    keysPerUnit: KEYS_PER_AREA },
+  { id: "area",     label: "Ground",   param: "groundId",   visible: VISIBLE_GROUNDS,   total: GROUNDS_PER_AREA,    keysPerUnit: KEYS_PER_GROUND },
+  { id: "ground",   label: "Grain",    param: "grainId",    visible: VISIBLE_GRAINS,    total: GRAINS_PER_GROUND,   keysPerUnit: KEYS_PER_GRAIN },
+  { id: "grain",    label: "Molecule", param: "moleculeId", visible: VISIBLE_MOLECULES, total: MOLECULES_PER_GRAIN, keysPerUnit: KEYS_PER_MOLECULE },
+  { id: "molecule", label: "Atom",     param: "atomId",     visible: VISIBLE_ATOMS,     total: ATOMS_PER_MOLECULE,  keysPerUnit: KEYS_PER_ATOM },
+  { id: "atom",     label: "Quark",    param: "quarkId",    visible: VISIBLE_QUARKS,    total: QUARKS_PER_ATOM,     keysPerUnit: KEYS_PER_QUARK },
+  { id: "quark",    label: "String",   param: null,         visible: VISIBLE_STRINGS,   total: STRINGS_PER_QUARK,   keysPerUnit: KEYS_PER_STRING },
 ];
 
-export function computeKeyStart(galaxyId, starId, planetId, continentId, regionId, areaId, groundId, grainId, moleculeId, atomId, quarkId) {
+export function computeKeyStart(galaxyId, starId, planetId, regionId, sectorId, areaId, groundId, grainId, moleculeId, atomId, quarkId) {
   let start = BigInt(galaxyId ?? 0) * KEYS_PER_GALAXY;
   start += BigInt(starId ?? 0) * KEYS_PER_STAR;
   start += BigInt(planetId ?? 0) * KEYS_PER_PLANET;
-  if (continentId != null) start += BigInt(continentId) * KEYS_PER_CONTINENT;
   if (regionId != null) start += BigInt(regionId) * KEYS_PER_REGION;
+  if (sectorId != null) start += BigInt(sectorId) * KEYS_PER_SECTOR;
   if (areaId != null) start += BigInt(areaId) * KEYS_PER_AREA;
   if (groundId != null) start += BigInt(groundId) * KEYS_PER_GROUND;
   if (grainId != null) start += BigInt(grainId) * KEYS_PER_GRAIN;
@@ -67,8 +68,8 @@ export function computeKeyStart(galaxyId, starId, planetId, continentId, regionI
   return start;
 }
 
-export function computeHexKey(galaxyId, starId, planetId, continentId, regionId, areaId, groundId, grainId, moleculeId, atomId, quarkId, offset = 0) {
-  const start = computeKeyStart(galaxyId, starId, planetId, continentId, regionId, areaId, groundId, grainId, moleculeId, atomId, quarkId);
+export function computeHexKey(galaxyId, starId, planetId, regionId, sectorId, areaId, groundId, grainId, moleculeId, atomId, quarkId, offset = 0) {
+  const start = computeKeyStart(galaxyId, starId, planetId, regionId, sectorId, areaId, groundId, grainId, moleculeId, atomId, quarkId);
   const key = start + BigInt(offset);
   return key.toString(16).padStart(64, "0").toUpperCase();
 }
