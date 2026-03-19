@@ -3,10 +3,9 @@ import * as THREE from "three";
 import { useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, Stars, Html } from "@react-three/drei";
 import { useParams, useNavigate } from "react-router-dom";
-import { getRandomPlanetType, generatePlanetColor, hashString } from "../config/planetTypes";
+import { getRandomPlanetType, hashString } from "../config/planetTypes";
 import { ORBIT_CONTROLS } from "../config/renderConfig";
 import { KEYS_PER_GALAXY } from "../utils/constants";
-import { generatePlanetName } from "../utils/planetStats";
 
 // Simple fBm for terrain height
 function noise2D(x, y, seed) {
@@ -62,7 +61,7 @@ function TerrainSurface({ seed, planetType }) {
   );
 }
 
-function Grains({ seed, planetType, onGrainHover }) {
+function Grains({ seed, planetType, onGrainHover, onGrainClick }) {
   const meshRef = useRef();
   const seedVal = hashString(seed);
 
@@ -81,7 +80,6 @@ function Grains({ seed, planetType, onGrainHover }) {
       pos[i * 3 + 1] = y;
       pos[i * 3 + 2] = z;
 
-      // Slight color variation per grain
       const variation = (hashString(`${grainSeed}c`) % 100) / 500;
       const baseColor = palette?.high ?? new THREE.Color("#C4A87A");
       col[i * 3] = baseColor.r + variation;
@@ -99,7 +97,6 @@ function Grains({ seed, planetType, onGrainHover }) {
     []
   );
 
-  // Set instance matrices
   React.useEffect(() => {
     if (!meshRef.current) return;
     for (let i = 0; i < GRAIN_COUNT; i++) {
@@ -127,10 +124,12 @@ function Grains({ seed, planetType, onGrainHover }) {
       if (idx !== hoveredIdx) {
         setHoveredIdx(idx);
         onGrainHover?.(idx);
+        document.body.style.cursor = "pointer";
       }
     } else if (hoveredIdx !== null) {
       setHoveredIdx(null);
       onGrainHover?.(null);
+      document.body.style.cursor = "default";
     }
   });
 
@@ -138,6 +137,10 @@ function Grains({ seed, planetType, onGrainHover }) {
     <instancedMesh
       ref={meshRef}
       args={[grainGeometry, grainMaterial, GRAIN_COUNT]}
+      onClick={(e) => {
+        e.stopPropagation();
+        if (e.instanceId != null) onGrainClick?.(e.instanceId);
+      }}
     />
   );
 }
@@ -157,31 +160,31 @@ function GrainTooltipHtml({ grainIndex, seed, galaxyId, starId, planetId }) {
     <Html center style={{ pointerEvents: "none" }} position={[0, -8, 0]}>
       <div
         style={{
-          background: "rgba(42, 27, 80, 0.95)",
-          border: "1px solid rgba(77, 244, 255, 0.3)",
-          borderRadius: 8,
-          padding: "12px 16px",
-          maxWidth: 500,
+          background: "rgba(10, 6, 30, 0.9)",
+          border: "1px solid rgba(77, 244, 255, 0.2)",
+          borderRadius: 4,
+          padding: "8px 12px",
+          maxWidth: 420,
           whiteSpace: "nowrap",
+          fontFamily: '"Roboto Mono", monospace',
         }}
       >
-        <div style={{ color: "#4df4ff", fontSize: "0.8rem", marginBottom: 4 }}>
+        <div style={{ color: "#4df4ff", fontSize: "0.7rem", marginBottom: 4 }}>
           Grain #{grainIndex.toLocaleString()}
         </div>
         <div
           style={{
             color: "#e0e0e0",
-            fontSize: "0.6rem",
-            fontFamily: "monospace",
+            fontSize: "0.55rem",
             wordBreak: "break-all",
             whiteSpace: "normal",
-            maxWidth: 400,
-            opacity: 0.8,
+            maxWidth: 360,
+            opacity: 0.7,
           }}
         >
           {hexKey}
         </div>
-        <div style={{ color: "#a999b3", fontSize: "0.7rem", marginTop: 6 }}>
+        <div style={{ color: "#a999b3", fontSize: "0.6rem", marginTop: 4 }}>
           Has this key been used? No.
         </div>
       </div>
@@ -189,119 +192,33 @@ function GrainTooltipHtml({ grainIndex, seed, galaxyId, starId, planetId }) {
   );
 }
 
-function SurfaceInfoHtml({ planetSeed, planetType, galaxyId, starId, planetId, hoveredGrain }) {
-  const navigate = useNavigate();
-  const planetName = useMemo(() => generatePlanetName(planetSeed), [planetSeed]);
-
-  const keysPerPlanet = KEYS_PER_GALAXY / BigInt(1000) / BigInt(10);
-  const keysStr = keysPerPlanet.toString();
-  const keysExponent = keysStr.length - 1;
-
-  return (
-    <Html
-      style={{ pointerEvents: "auto" }}
-      position={[20, 10, 0]}
-      distanceFactor={undefined}
-      transform={false}
-      portal={undefined}
-      fullscreen
-    >
-      <div
-        style={{
-          position: "fixed",
-          top: 20,
-          right: 20,
-          padding: 16,
-          background: "rgba(42, 27, 80, 0.92)",
-          backdropFilter: "blur(10px)",
-          border: "1px solid rgba(77, 244, 255, 0.3)",
-          boxShadow: "0 0 15px rgba(77, 200, 255, 0.2)",
-          borderRadius: 4,
-          maxWidth: 300,
-          minWidth: 240,
-          fontFamily: '"Roboto Mono", monospace',
-        }}
-      >
-        {/* Breadcrumb */}
-        <div style={{ display: "flex", gap: 8, marginBottom: 12, fontSize: "0.75rem" }}>
-          <span
-            style={{ color: "#4df4ff", cursor: "pointer" }}
-            onClick={() => navigate(`/galaxy/${galaxyId}`)}
-          >
-            Galaxy
-          </span>
-          <span style={{ color: "#a999b3" }}>/</span>
-          <span
-            style={{ color: "#4df4ff", cursor: "pointer" }}
-            onClick={() => navigate(`/galaxy/${galaxyId}/star/${starId}`)}
-          >
-            Star
-          </span>
-          <span style={{ color: "#a999b3" }}>/</span>
-          <span
-            style={{ color: "#4df4ff", cursor: "pointer" }}
-            onClick={() => navigate(`/galaxy/${galaxyId}/star/${starId}/planet/${planetId}`)}
-          >
-            {planetName}
-          </span>
-          <span style={{ color: "#a999b3" }}>/</span>
-          <span style={{ color: "#4df4ff" }}>Surface</span>
-        </div>
-
-        <div style={{ color: "#4df4ff", fontSize: "0.9rem", marginBottom: 8 }}>
-          Surface of {planetName}
-        </div>
-
-        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <div style={{ display: "flex", justifyContent: "space-between" }}>
-            <span style={{ color: "#a999b3", fontSize: "0.8rem" }}>Type:</span>
-            <span style={{ color: "#e0e0e0", fontSize: "0.8rem" }}>{planetType?.name ?? "Unknown"}</span>
-          </div>
-          <div style={{ display: "flex", justifyContent: "space-between" }}>
-            <span style={{ color: "#a999b3", fontSize: "0.8rem" }}>Visible Grains:</span>
-            <span style={{ color: "#e0e0e0", fontSize: "0.8rem" }}>{GRAIN_COUNT.toLocaleString()}</span>
-          </div>
-          <div style={{ display: "flex", justifyContent: "space-between" }}>
-            <span style={{ color: "#a999b3", fontSize: "0.8rem" }}>Total Grains:</span>
-            <span style={{ color: "#e0e0e0", fontSize: "0.8rem" }}>~10^{keysExponent}</span>
-          </div>
-        </div>
-
-        {hoveredGrain !== null && (
-          <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid rgba(77, 244, 255, 0.15)" }}>
-            <span style={{ color: "#4df4ff", fontSize: "0.75rem" }}>
-              Grain #{hoveredGrain.toLocaleString()}
-            </span>
-          </div>
-        )}
-
-        <button
-          onClick={() => navigate(`/galaxy/${galaxyId}/star/${starId}/planet/${planetId}`)}
-          style={{
-            marginTop: 12,
-            padding: "6px 12px",
-            background: "transparent",
-            border: "1px solid rgba(77, 244, 255, 0.3)",
-            color: "#4df4ff",
-            fontSize: "0.7rem",
-            fontFamily: '"Roboto Mono", monospace',
-            cursor: "pointer",
-            borderRadius: 4,
-          }}
-        >
-          Back to Planet
-        </button>
-      </div>
-    </Html>
-  );
-}
-
-export default function SurfaceView({ onPlanetHover }) {
+export default function SurfaceView({ onPlanetHover, onGrainHover }) {
   const { galaxyId, starId, planetId } = useParams();
+  const navigate = useNavigate();
   const [hoveredGrain, setHoveredGrain] = useState(null);
 
   const planetSeed = `${galaxyId}${starId}${planetId}`;
   const planetType = useMemo(() => getRandomPlanetType(planetSeed), [planetSeed]);
+
+  const handleGrainHover = useCallback(
+    (idx) => {
+      setHoveredGrain(idx);
+      onGrainHover?.(idx);
+    },
+    [onGrainHover]
+  );
+
+  // Reset cursor on unmount
+  React.useEffect(() => {
+    return () => { document.body.style.cursor = "default"; };
+  }, []);
+
+  const handleGrainClick = useCallback(
+    (idx) => {
+      navigate(`/galaxy/${galaxyId}/star/${starId}/planet/${planetId}/surface/grain/${idx}`);
+    },
+    [navigate, galaxyId, starId, planetId]
+  );
 
   return (
     <>
@@ -323,7 +240,8 @@ export default function SurfaceView({ onPlanetHover }) {
       <Grains
         seed={planetSeed}
         planetType={planetType}
-        onGrainHover={setHoveredGrain}
+        onGrainHover={handleGrainHover}
+        onGrainClick={handleGrainClick}
       />
       <GrainTooltipHtml
         grainIndex={hoveredGrain}
@@ -331,14 +249,6 @@ export default function SurfaceView({ onPlanetHover }) {
         galaxyId={galaxyId}
         starId={starId}
         planetId={planetId}
-      />
-      <SurfaceInfoHtml
-        planetSeed={planetSeed}
-        planetType={planetType}
-        galaxyId={galaxyId}
-        starId={starId}
-        planetId={planetId}
-        hoveredGrain={hoveredGrain}
       />
     </>
   );

@@ -1,55 +1,16 @@
 import React, { useMemo } from "react";
-import { Box, Typography, Paper } from "@mui/material";
+import { Box, Typography } from "@mui/material";
 import { useParams } from "react-router-dom";
-import BreadcrumbNav from "./BreadcrumbNav";
 import { generatePlanetName, generatePlanetStats } from "../utils/planetStats";
-import { PLANET_TYPES, getRandomPlanetType } from "../config/planetTypes";
+import { getRandomPlanetType } from "../config/planetTypes";
 import { KEYS_PER_GALAXY } from "../utils/constants";
+import HudWidget, { InfoRow, SectionLabel } from "./HudWidget";
 
-function InfoRow({ label, value }) {
-  return (
-    <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2 }}>
-      <Typography component="span" sx={{ color: "var(--theme-accent)", fontSize: "0.8rem" }}>
-        {label}
-      </Typography>
-      <Typography component="span" sx={{ color: "var(--theme-text)", fontSize: "0.8rem", textAlign: "right" }}>
-        {value}
-      </Typography>
-    </Box>
-  );
-}
-
-function SectionHeader({ children }) {
-  return (
-    <Typography
-      component="h6"
-      sx={{
-        color: "var(--theme-secondary)",
-        fontSize: "0.75rem",
-        textTransform: "uppercase",
-        letterSpacing: "0.1em",
-        mt: 1.5,
-        mb: 0.5,
-        borderBottom: "1px solid rgba(77, 244, 255, 0.15)",
-        pb: 0.5,
-      }}
-    >
-      {children}
-    </Typography>
-  );
-}
-
-export default function PlanetInfoPanel({ selectedPlanet }) {
+export function PlanetOverviewWidget({ selectedPlanet }) {
   const { galaxyId, starId, planetId } = useParams();
-
   const planetSeed = `${galaxyId}${starId}${planetId}`;
   const planetType = useMemo(() => getRandomPlanetType(planetSeed), [planetSeed]);
-
-  const proceduralName = useMemo(
-    () => generatePlanetName(planetSeed),
-    [planetSeed]
-  );
-
+  const proceduralName = useMemo(() => generatePlanetName(planetSeed), [planetSeed]);
   const stats = useMemo(
     () => generatePlanetStats(planetSeed, planetType),
     [planetSeed, planetType]
@@ -57,132 +18,156 @@ export default function PlanetInfoPanel({ selectedPlanet }) {
 
   if (!selectedPlanet) return null;
 
-  const breadcrumbItems = [
-    { label: "Galaxy", path: `/galaxy/${galaxyId}` },
-    { label: "Star", path: `/galaxy/${galaxyId}/star/${starId}` },
-    { label: proceduralName },
-  ];
-
-  // Keyspace calculations
-  const keysPerPlanet = KEYS_PER_GALAXY / BigInt(1000) / BigInt(10); // galaxy -> stars -> planets
-  const keysPerPlanetStr = keysPerPlanet.toString();
-  const keysExponent = keysPerPlanetStr.length - 1;
-
-  // Hex key range
-  const galaxyNum = BigInt(galaxyId ?? 0);
-  const starNum = BigInt(starId ?? 0);
-  const planetNum = BigInt(planetId ?? 0);
-  const startKey = galaxyNum * KEYS_PER_GALAXY + starNum * (KEYS_PER_GALAXY / BigInt(1000)) + planetNum * keysPerPlanet;
-  const endKey = startKey + keysPerPlanet - BigInt(1);
-  const startHex = startKey.toString(16).padStart(64, "0").toUpperCase();
-  const endHex = endKey.toString(16).padStart(64, "0").toUpperCase();
-
-  // Atmosphere color for glow border
   const atmosColor = planetType.atmosphereColor;
-  const glowHex = atmosColor ? `#${atmosColor.getHexString()}` : "rgba(77, 244, 255, 0.3)";
+  const glowHex = atmosColor ? `#${atmosColor.getHexString()}` : null;
 
   return (
-    <Paper
-      sx={{
-        position: "absolute",
-        top: 20,
-        right: 20,
-        padding: 2,
-        background: "rgba(42, 27, 80, 0.92)",
-        backdropFilter: "blur(10px)",
-        border: `1px solid ${glowHex}40`,
-        boxShadow: `0 0 20px ${glowHex}30`,
-        animation: "fadeIn 0.3s ease-out",
-        maxWidth: 340,
-        minWidth: 280,
-      }}
-    >
-      <BreadcrumbNav items={breadcrumbItems} />
-
-      {/* Overview Section */}
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 1 }}>
+    <HudWidget glowColor={glowHex}>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5 }}>
         <Box
           sx={{
-            width: 28,
-            height: 28,
+            width: 14,
+            height: 14,
             borderRadius: "50%",
             background: `#${selectedPlanet.color?.toString(16).padStart(6, "0") ?? "888888"}`,
-            boxShadow: `0 0 8px ${glowHex}60`,
+            boxShadow: glowHex ? `0 0 6px ${glowHex}60` : "none",
             flexShrink: 0,
           }}
         />
         <Box>
-          <Typography component="h5" sx={{ color: "var(--theme-secondary)", fontSize: "1rem", fontWeight: 600 }}>
+          <Typography
+            sx={{
+              color: "var(--theme-secondary)",
+              fontSize: "0.8rem",
+              fontWeight: 600,
+              lineHeight: 1.2,
+            }}
+          >
             {proceduralName}
           </Typography>
-          <Typography component="span" sx={{ color: "var(--theme-accent)", fontSize: "0.75rem" }}>
+          <Typography sx={{ color: "var(--theme-accent)", fontSize: "0.55rem", opacity: 0.7 }}>
             {selectedPlanet.name ?? planetType.name}
           </Typography>
         </Box>
       </Box>
-
-      {/* Physical Section */}
-      <SectionHeader>Physical</SectionHeader>
-      <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
-        <InfoRow label="Size" value={`${selectedPlanet.size?.toFixed(2) ?? "?"} Earth Radii`} />
+      <SectionLabel>Physical</SectionLabel>
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 0.2 }}>
+        <InfoRow label="Size" value={`${selectedPlanet.size?.toFixed(2) ?? "?"} ER`} />
         <InfoRow label="Gravity" value={stats.gravity} />
-        <InfoRow label="Surface Temp" value={stats.surfaceTemp} />
-        <InfoRow label="Distance" value={`${selectedPlanet.distance?.toFixed(2) ?? "?"} AU`} />
-        <InfoRow label="Orbital Period" value={stats.orbitalPeriod} />
+        <InfoRow label="Temp" value={stats.surfaceTemp} />
+        <InfoRow label="Distance" value={`${selectedPlanet.distance?.toFixed(1) ?? "?"} AU`} />
+        <InfoRow label="Orbit" value={stats.orbitalPeriod} />
         <InfoRow label="Rotation" value={stats.rotationPeriod} />
       </Box>
+    </HudWidget>
+  );
+}
 
-      {/* Atmosphere Section */}
+export function PlanetDetailWidget({ selectedPlanet }) {
+  const { galaxyId, starId, planetId } = useParams();
+  const planetSeed = `${galaxyId}${starId}${planetId}`;
+  const planetType = useMemo(() => getRandomPlanetType(planetSeed), [planetSeed]);
+  const stats = useMemo(
+    () => generatePlanetStats(planetSeed, planetType),
+    [planetSeed, planetType]
+  );
+
+  if (!selectedPlanet) return null;
+
+  const keysPerPlanet = KEYS_PER_GALAXY / BigInt(1000) / BigInt(10);
+  const keysExponent = keysPerPlanet.toString().length - 1;
+  const galaxyNum = BigInt(galaxyId ?? 0);
+  const starNum = BigInt(starId ?? 0);
+  const planetNum = BigInt(planetId ?? 0);
+  const startKey =
+    galaxyNum * KEYS_PER_GALAXY +
+    starNum * (KEYS_PER_GALAXY / BigInt(1000)) +
+    planetNum * keysPerPlanet;
+  const endKey = startKey + keysPerPlanet - BigInt(1);
+  const startHex = startKey.toString(16).padStart(64, "0").toUpperCase();
+  const endHex = endKey.toString(16).padStart(64, "0").toUpperCase();
+
+  return (
+    <>
       {stats.atmosphere && (
-        <>
-          <SectionHeader>Atmosphere</SectionHeader>
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 0.3 }}>
+        <HudWidget title="Atmosphere">
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 0.2 }}>
             {stats.atmosphere.map((gas) => (
               <InfoRow key={gas.name} label={gas.name} value={`${gas.percentage}%`} />
             ))}
           </Box>
-        </>
+        </HudWidget>
       )}
-
-      {/* Keyspace Section */}
-      <SectionHeader>Keyspace</SectionHeader>
-      <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
-        <InfoRow label="Keys (grains)" value={`~10^${keysExponent}`} />
-        <Box sx={{ mt: 0.5 }}>
-          <Typography component="span" sx={{ color: "var(--theme-accent)", fontSize: "0.65rem" }}>
-            Range Start:
-          </Typography>
-          <Typography
-            component="div"
-            sx={{
-              color: "var(--theme-text)",
-              fontSize: "0.55rem",
-              fontFamily: "monospace",
-              wordBreak: "break-all",
-              opacity: 0.7,
-            }}
-          >
-            {startHex.slice(0, 32)}...
-          </Typography>
+      <HudWidget title="Keyspace">
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 0.25 }}>
+          <InfoRow label="Keys (grains)" value={`~10^${keysExponent}`} />
         </Box>
-        <Box>
-          <Typography component="span" sx={{ color: "var(--theme-accent)", fontSize: "0.65rem" }}>
-            Range End:
-          </Typography>
-          <Typography
-            component="div"
-            sx={{
-              color: "var(--theme-text)",
-              fontSize: "0.55rem",
-              fontFamily: "monospace",
-              wordBreak: "break-all",
-              opacity: 0.7,
-            }}
-          >
-            {endHex.slice(0, 32)}...
-          </Typography>
-        </Box>
-      </Box>
-    </Paper>
+        <Typography
+          sx={{
+            color: "var(--theme-accent)",
+            fontSize: "0.5rem",
+            mt: 0.5,
+            opacity: 0.6,
+          }}
+        >
+          Range
+        </Typography>
+        <Typography
+          sx={{
+            color: "var(--theme-text)",
+            fontSize: "0.45rem",
+            fontFamily: '"Roboto Mono", monospace',
+            wordBreak: "break-all",
+            opacity: 0.5,
+            lineHeight: 1.3,
+          }}
+        >
+          {startHex.slice(0, 20)}...
+        </Typography>
+        <Typography
+          sx={{
+            color: "var(--theme-text)",
+            fontSize: "0.45rem",
+            fontFamily: '"Roboto Mono", monospace',
+            wordBreak: "break-all",
+            opacity: 0.5,
+            lineHeight: 1.3,
+          }}
+        >
+          {endHex.slice(0, 20)}...
+        </Typography>
+      </HudWidget>
+    </>
   );
 }
+
+export function PlanetHoverWidget({ selectedPlanet }) {
+  if (!selectedPlanet) return null;
+
+  return (
+    <HudWidget>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, mb: 0.5 }}>
+        <Box
+          sx={{
+            width: 10,
+            height: 10,
+            borderRadius: "50%",
+            background: `#${selectedPlanet.color?.toString(16).padStart(6, "0") ?? "888888"}`,
+            flexShrink: 0,
+          }}
+        />
+        <Typography
+          sx={{ color: "var(--theme-secondary)", fontSize: "0.75rem", fontWeight: 600 }}
+        >
+          {selectedPlanet.name ?? "Planet"}
+        </Typography>
+      </Box>
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 0.2 }}>
+        <InfoRow label="Size" value={`${selectedPlanet.size?.toFixed(2) ?? "?"} ER`} />
+        <InfoRow label="Distance" value={`${selectedPlanet.distance?.toFixed(1) ?? "?"} AU`} />
+      </Box>
+    </HudWidget>
+  );
+}
+
+export default PlanetOverviewWidget;

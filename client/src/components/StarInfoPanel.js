@@ -1,25 +1,17 @@
 import React from "react";
-import { Box, Typography, Paper } from "@mui/material";
+import { Box, Typography } from "@mui/material";
 import { starTypes } from "../config/starDistributions";
-import { useParams } from "react-router-dom";
-import BreadcrumbNav from "./BreadcrumbNav";
+import HudWidget, { InfoRow } from "./HudWidget";
 
-export default function StarInfoPanel({ selectedStar }) {
-  const { galaxyId } = useParams();
-
-  // console.log("StarInfoPanel received selectedStar:", selectedStar);
-
+export default function StarInfoWidget({ selectedStar }) {
   if (!selectedStar || !starTypes) return null;
 
   const starTypeIndex = selectedStar.type;
-
-  // Safety check for starTypeIndex
   if (
     typeof starTypeIndex !== "number" ||
     starTypeIndex < 0 ||
     starTypeIndex >= starTypes.color.length
   ) {
-    console.error("Invalid starTypeIndex:", starTypeIndex);
     return null;
   }
 
@@ -27,69 +19,30 @@ export default function StarInfoPanel({ selectedStar }) {
     .toString(16)
     .padStart(6, "0")}`;
 
-  const breadcrumbItems = [
-    { label: "Galaxy", path: `/galaxy/${galaxyId}` },
-    { label: `Star Type ${starTypeIndex}` },
-  ];
-
   return (
-    <Paper
-      sx={{
-        position: "absolute",
-        top: 20,
-        right: 20,
-        padding: 2,
-        background: "rgba(42, 27, 80, 0.9)",
-        backdropFilter: "blur(10px)",
-        border: "1px solid rgba(77, 244, 255, 0.3)",
-        boxShadow: "0 0 15px var(--theme-glow-secondary)",
-        animation: "fadeIn 0.3s ease-out",
-      }}
-    >
-      <BreadcrumbNav items={breadcrumbItems} />
-      <Typography
-        component="h6"
-        sx={{ color: "var(--theme-secondary)", mb: 2 }}
-      >
-        Star Information
-      </Typography>
-      <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <Typography component="span" sx={{ color: "var(--theme-accent)" }}>
-            Star Class:
-          </Typography>
-          <Box
-            sx={{
-              width: 12,
-              height: 12,
-              borderRadius: "50%",
-              backgroundColor: color,
-              boxShadow: `0 0 10px ${color}`,
-            }}
-          />
-          <Typography component="span" sx={{ color: "var(--theme-text)" }}>
-            Type {starTypeIndex}
-          </Typography>
-        </Box>
-        <Typography component="span" sx={{ color: "var(--theme-accent)" }}>
-          Temperature:
-        </Typography>
-        <Typography component="span" sx={{ color: "var(--theme-text)" }}>
-          {starTypes.temperature[starTypeIndex]}K
-        </Typography>
-        <Typography component="span" sx={{ color: "var(--theme-accent)" }}>
-          Mass:
-        </Typography>
-        <Typography component="span" sx={{ color: "var(--theme-text)" }}>
-          {starTypes.mass[starTypeIndex]} M☉
-        </Typography>
-        <Typography component="span" sx={{ color: "var(--theme-accent)" }}>
-          Luminosity:
-        </Typography>
-        <Typography component="span" sx={{ color: "var(--theme-text)" }}>
-          {starTypes.luminosity[starTypeIndex]} L☉
+    <HudWidget>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, mb: 0.5 }}>
+        <Box
+          sx={{
+            width: 10,
+            height: 10,
+            borderRadius: "50%",
+            backgroundColor: color,
+            boxShadow: `0 0 8px ${color}`,
+            flexShrink: 0,
+          }}
+        />
+        <Typography
+          sx={{ color: "var(--theme-secondary)", fontSize: "0.8rem", fontWeight: 600 }}
+        >
+          Star Type {starTypeIndex}
         </Typography>
       </Box>
-    </Paper>
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 0.25 }}>
+        <InfoRow label="Temperature" value={`${starTypes.temperature[starTypeIndex]}K`} />
+        <InfoRow label="Mass" value={`${starTypes.mass[starTypeIndex]} M☉`} />
+        <InfoRow label="Luminosity" value={`${starTypes.luminosity[starTypeIndex]} L☉`} />
+      </Box>
+    </HudWidget>
   );
 }

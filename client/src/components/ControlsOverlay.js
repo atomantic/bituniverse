@@ -1,6 +1,26 @@
 import React from "react";
 import { Box, Typography } from "@mui/material";
 
+function ControlRow({ keys, action }) {
+  return (
+    <Box sx={{ display: "flex", gap: 1, alignItems: "baseline" }}>
+      <Typography
+        sx={{
+          color: "var(--theme-secondary)",
+          fontSize: "0.6rem",
+          minWidth: 100,
+          textAlign: "right",
+        }}
+      >
+        {keys}
+      </Typography>
+      <Typography sx={{ color: "var(--theme-text)", fontSize: "0.6rem", opacity: 0.7 }}>
+        {action}
+      </Typography>
+    </Box>
+  );
+}
+
 export default function ControlsOverlay({ isVisible }) {
   if (!isVisible) return null;
 
@@ -8,55 +28,40 @@ export default function ControlsOverlay({ isVisible }) {
     <Box
       sx={{
         position: "absolute",
-        bottom: 60,
-        left: 20,
-        padding: 2,
-        background: "rgba(42, 27, 80, 0.9)",
-        backdropFilter: "blur(10px)",
-        border: "1px solid rgba(77, 244, 255, 0.3)",
-        boxShadow: "0 0 15px var(--theme-glow-secondary)",
-        animation: "fadeIn 0.3s ease-out",
+        bottom: 40,
+        right: 8,
+        padding: "10px 14px",
+        background: "rgba(10, 6, 30, 0.9)",
+        backdropFilter: "blur(12px)",
+        border: "1px solid rgba(77, 244, 255, 0.15)",
+        borderRadius: "4px",
+        pointerEvents: "auto",
+        zIndex: 10,
       }}
     >
       <Typography
-        variant="body2"
-        sx={{ color: "var(--theme-secondary)", mb: 1 }}
+        sx={{
+          color: "var(--theme-secondary)",
+          fontSize: "0.55rem",
+          textTransform: "uppercase",
+          letterSpacing: "0.15em",
+          mb: 0.75,
+          opacity: 0.7,
+        }}
       >
         Controls
       </Typography>
-      <Typography variant="body2" sx={{ color: "var(--theme-text)" }}>
-        Arrow Keys - Navigate Galaxies
-      </Typography>
-      <Typography variant="body2" sx={{ color: "var(--theme-text)" }}>
-        Enter/Space - Zoom Into Selection
-      </Typography>
-      <Typography variant="body2" sx={{ color: "var(--theme-text)" }}>
-        Escape/Backspace - Zoom Out
-      </Typography>
-      <Typography variant="body2" sx={{ color: "var(--theme-text)" }}>
-        Mouse - Select System
-      </Typography>
-      <Typography variant="body2" sx={{ color: "var(--theme-text)" }}>
-        j - Random Galaxy Jump
-      </Typography>
-      <Typography variant="body2" sx={{ color: "var(--theme-text)" }}>
-        m - Zoom to Galaxy Center
-      </Typography>
-      <Typography variant="body2" sx={{ color: "var(--theme-text)" }}>
-        o - Reset Camera Position to Origin
-      </Typography>
-      <Typography
-        variant="body2"
-        sx={{ color: "var(--theme-text)", mt: 1, opacity: 0.7 }}
-      >
-        c - Toggle Controls
-      </Typography>
-      <Typography
-        variant="body2"
-        sx={{ color: "var(--theme-text)", opacity: 0.7 }}
-      >
-        i - Toggle Info Panels
-      </Typography>
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 0.3 }}>
+        <ControlRow keys="← →" action="Navigate" />
+        <ControlRow keys="Enter / Space" action="Zoom In" />
+        <ControlRow keys="Esc / Backspace" action="Zoom Out" />
+        <ControlRow keys="Mouse" action="Orbit / Select" />
+        <ControlRow keys="J" action="Random Jump" />
+        <ControlRow keys="M" action="Center Galaxy" />
+        <ControlRow keys="O" action="Reset Camera" />
+        <ControlRow keys="C" action="Toggle Controls" />
+        <ControlRow keys="I" action="Toggle HUD" />
+      </Box>
     </Box>
   );
 }

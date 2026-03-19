@@ -1,39 +1,49 @@
-# PLAN: BitUniverse Visual Improvements
+# PLAN: Deep Zoom Hierarchy Redesign
 
 ## Status: Implemented
 
-All 5 phases have been implemented.
+9-level deep zoom hierarchy below planet, covering the full 10^61 keys per planet.
 
-### Phase 1: Planet Visual Overhaul - DONE
-- [x] 1A. Multi-octave fBm terrain (fbm function with configurable octaves)
-- [x] 1B. Higher geometry resolution (detail prop: 32 in solar system, 64 in planet view)
-- [x] 1C. Elevation-based multi-color terrain (colorLow/Mid/High uniforms, smoothstep blending)
-- [x] 1D. Type-specific atmosphere colors (atmosphereColor per planet type)
-- [x] 1E. Slow rotation animation (rotationSpeed prop wired through useFrame)
-- [x] 1F. Rings for gas/ice giants (RingGeometry with procedural opacity band shader)
-- [x] 1G. Better directional lighting (lightPosition uniform, directionalLight in PlanetView)
+### Hierarchy
+| # | View | Subdivision | Visible Items |
+|---|------|------------|---------------|
+| 1 | Globe | 10^7 | 49 (7x7 lat/lon) |
+| 2 | Continent | 10^7 | 400 (20x20 grid) |
+| 3 | Region | 10^7 | 400 (20x20 grid) |
+| 4 | Area | 10^7 | 400 (20x20 grid) |
+| 5 | Ground | 10^7 | 2000 (instanced) |
+| 6 | Grain | 10^7 | 729 (9^3 lattice) |
+| 7 | Molecule | 10^7 | 500 |
+| 8 | Atom | 10^7 | 500 |
+| 9 | Quark | 10^5 | 500 |
 
-### Phase 2: Planet Info Panel Enrichment - DONE
-- [x] 2A. Fix name display (procedural name generator: syllable combiner)
-- [x] 2B. Procedural stats (gravity, temp, orbital period, rotation, atmosphere composition)
-- [x] 2C. Keyspace context section (hex range, key count as exponent)
-- [x] 2D. Panel visual redesign (sections: Overview, Physical, Atmosphere, Keyspace)
+Math: 10^7 x 8 + 10^5 = 10^61
 
-### Phase 3: Deeper Zoom — Surface/Grain View - DONE
-- [x] 3A. New route (/galaxy/:id/star/:id/planet/:id/surface)
-- [x] 3B. SurfaceView component (fBm terrain plane + InstancedMesh grains)
-- [x] 3C. Grain interaction (raycasting on InstancedMesh, tooltip with hex key)
-- [x] 3D. Navigation trigger (Enter/Space to zoom in, Escape/Backspace to zoom out)
-- [x] 3E. SurfaceInfoPanel (inline via drei Html, breadcrumb, grain count, back button)
+### Implementation - DONE
+- [x] Phase 1: Foundation - keyspaceHierarchy.js, App.js routes, Scene.js, breadcrumbs, widgets
+- [x] Phase 2: GlobeView (sphere with continent zones) + GroundView (adapted SurfaceView)
+- [x] Phase 3: TerrainTileView (shared base), ContinentView, RegionView, AreaView
+- [x] Phase 4: MoleculeView, updated GrainView/AtomView/QuarkView route paths
 
-### Phase 4: Solar System Improvements - DONE
-- [x] 4A. Animated orbits (OrbitingPlanet wrapper with useFrame)
-- [x] 4B. Orbital path visualization (EllipseCurve + Line)
-- [x] 4C. Better star rendering (layered core + outer glow sphere with additive blending)
-- [x] 4D. Free orbit camera (removed maxPolarAngle constraint, 45-degree initial angle)
+### Files Created
+- `client/src/views/GlobeView.js` - 3D sphere with 7x7 lat/lon click zones
+- `client/src/views/ContinentView.js` - Top-down terrain map (20x20 grid)
+- `client/src/views/RegionView.js` - Closer terrain map (20x20 grid)
+- `client/src/views/AreaView.js` - Ground-level terrain (20x20 grid)
+- `client/src/views/TerrainTileView.js` - Shared terrain tile base for continent/region/area
+- `client/src/views/GroundView.js` - Surface with 2000 instanced grains
+- `client/src/views/MoleculeView.js` - Molecular bond structure (500 atoms)
 
-### Phase 5: Galaxy & Navigation Polish - DONE
-- [x] 5A. Procedural galaxy names (syllable combiner in galaxyNames.js)
-- [x] 5B. Zoom in/out keyboard navigation (Enter/Space/Escape/Backspace)
-- [x] 5C. Scale indicators (galaxy count shown in GalaxyInfoPanel)
-- [x] 5D. Enhanced breadcrumbs (planet view shows procedural name)
+### Files Modified
+- `client/src/utils/keyspaceHierarchy.js` - 9-level subdivision constants
+- `client/src/App.js` - 12 routes (galaxy, star, planet + 9 deep zoom)
+- `client/src/Scene.js` - Data-driven view rendering, navigation, breadcrumbs
+- `client/src/views/PlanetView.js` - Click navigates to globe (not surface)
+- `client/src/views/GrainView.js` - Click navigates to molecule (not atom)
+- `client/src/views/AtomView.js` - Updated route paths for new hierarchy
+- `client/src/views/QuarkView.js` - Updated route paths + hex key computation
+- `client/src/components/DeepZoomWidgets.js` - 9 widgets for all deep zoom levels
+
+### Files Deleted
+- `client/src/views/SurfaceView.js` - Replaced by GlobeView + GroundView
+- `client/src/components/SurfaceInfoPanel.js` - Replaced by DeepZoomWidgets

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { OrbitControls } from "@react-three/drei";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import ProceduralPlanet from "../components/3d/ProceduralPlanet";
 import {
   getRandomPlanetType,
@@ -9,7 +9,7 @@ import {
 import { ORBIT_CONTROLS } from "../config/renderConfig";
 import { Stars } from "@react-three/drei";
 
-function Planet({ planetData, isSelected = true }) {
+function Planet({ planetData, isSelected = true, onClick }) {
   const groupRef = useRef();
 
   return (
@@ -53,6 +53,9 @@ function Planet({ planetData, isSelected = true }) {
           rotationSpeed={planetData.rotationSpeed}
           detail={64}
           isSelected={isSelected}
+          onClick={onClick}
+          onHover={() => { document.body.style.cursor = "pointer"; }}
+          onUnhover={() => { document.body.style.cursor = "default"; }}
         />
       </group>
     </group>
@@ -61,6 +64,7 @@ function Planet({ planetData, isSelected = true }) {
 
 export default function PlanetView({ onPlanetHover }) {
   const { galaxyId, starId, planetId } = useParams();
+  const navigate = useNavigate();
 
   // Generate deterministic planet data based on galaxy, star, and planet IDs
   const planetSeed = `${galaxyId}${starId}${planetId}`;
@@ -109,7 +113,11 @@ export default function PlanetView({ onPlanetHover }) {
         rotateSpeed={1.0}
         panSpeed={1.0}
       />
-      <Planet planetData={planetData} isSelected={true} />
+      <Planet
+        planetData={planetData}
+        isSelected={true}
+        onClick={() => navigate(`/galaxy/${galaxyId}/star/${starId}/planet/${planetId}/globe/0`)}
+      />
     </>
   );
 }
