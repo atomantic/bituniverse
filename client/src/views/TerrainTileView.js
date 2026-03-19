@@ -88,7 +88,7 @@ export default function TerrainTileView({
   const tileSize = terrainSize / gridSize;
   const tileGeo = useMemo(() => new THREE.PlaneGeometry(tileSize * 0.9, tileSize * 0.9), [tileSize]);
   const tileMat = useMemo(
-    () => new THREE.MeshBasicMaterial({ color: "#4df4ff", opacity: 0, transparent: true, side: THREE.DoubleSide }),
+    () => new THREE.MeshBasicMaterial({ color: "#4df4ff", opacity: 0.06, transparent: true, side: THREE.DoubleSide, depthWrite: false }),
     []
   );
 
@@ -135,10 +135,13 @@ export default function TerrainTileView({
     // Highlight hovered tile
     if (meshRef.current) {
       for (let i = 0; i < tileCount; i++) {
-        const color = i === hoveredIdx ? new THREE.Color("#4df4ff") : new THREE.Color("#4df4ff");
+        const color = i === hoveredIdx
+          ? new THREE.Color(0.3, 0.96, 1.0)
+          : new THREE.Color(0.15, 0.5, 0.55);
         meshRef.current.setColorAt(i, color);
       }
       if (meshRef.current.instanceColor) meshRef.current.instanceColor.needsUpdate = true;
+      tileMat.opacity = hoveredIdx !== null ? 0.15 : 0.06;
     }
   });
 
@@ -178,6 +181,9 @@ export default function TerrainTileView({
         <meshStandardMaterial vertexColors roughness={0.9} metalness={0.1} flatShading />
       </mesh>
 
+      {/* Grid lines */}
+      <GridLines gridSize={gridSize} terrainSize={terrainSize} tileSize={tileSize} seedVal={seedVal} noiseScale={noiseScale} noiseOctaves={noiseOctaves} heightScale={heightScale} />
+
       {/* Clickable tile overlay */}
       <instancedMesh
         ref={meshRef}
@@ -185,5 +191,35 @@ export default function TerrainTileView({
         onClick={handleClick}
       />
     </>
+  );
+}
+
+function GridLines({ gridSize, terrainSize, tileSize, seedVal, noiseScale, noiseOctaves, heightScale }) {
+  const gridGeo = useMemo(() => {
+    const points = [];
+    const half = terrainSize / 2;
+    // Vertical lines (along z)
+    for (let i = 0; i <= gridSize; i++) {
+      const x = i * tileSize - half;
+      const y0 = fbm2D(x * noiseScale, (-half) * noiseScale, seedVal, noiseOctaves) * heightScale + 0.15;
+      const y1 = fbm2D(x * noiseScale, half * noiseScale, seedVal, noiseOctaves) * heightScale + 0.15;
+      points.push(new THREE.Vector3(x, y0, -half));
+      points.push(new THREE.Vector3(x, y1, half));
+    }
+    // Horizontal lines (along x)
+    for (let i = 0; i <= gridSize; i++) {
+      const z = i * tileSize - half;
+      const y0 = fbm2D((-half) * noiseScale, z * noiseScale, seedVal, noiseOctaves) * heightScale + 0.15;
+      const y1 = fbm2D(half * noiseScale, z * noiseScale, seedVal, noiseOctaves) * heightScale + 0.15;
+      points.push(new THREE.Vector3(-half, y0, z));
+      points.push(new THREE.Vector3(half, y1, z));
+    }
+    return new THREE.BufferGeometry().setFromPoints(points);
+  }, [gridSize, terrainSize, tileSize, seedVal, noiseScale, noiseOctaves, heightScale]);
+
+  return (
+    <lineSegments geometry={gridGeo}>
+      <lineBasicMaterial color="#4df4ff" opacity={0.15} transparent />
+    </lineSegments>
   );
 }
