@@ -1,37 +1,23 @@
 import React, { useRef, useMemo, useState, useCallback } from "react";
 import * as THREE from "three";
 import { useFrame, useThree } from "@react-three/fiber";
-import { OrbitControls, Stars, Html } from "@react-three/drei";
+import { OrbitControls, Html } from "@react-three/drei";
 import { useParams, useNavigate } from "react-router-dom";
 import { hashString } from "../config/planetTypes";
-import { ORBIT_CONTROLS } from "../config/renderConfig";
 
-// Hex grid constants
+// Grid layout
 const HEX_RADIUS = 1.0;
-const HEX_HEIGHT_UNIT = HEX_RADIUS * Math.sqrt(3);
-const GRID_COLS = 20;
-const GRID_ROWS = 10;
-const CELL_COUNT = GRID_COLS * GRID_ROWS;
-const HEX_GAP = 0.06;
+const HEX_H = HEX_RADIUS * Math.sqrt(3);
+const COLS = 22;
+const ROWS = 14;
+const CELL_COUNT = COLS * ROWS;
+const GAP = 0.04;
 
-// Elevation levels (like hex-map-wfc's 5 levels)
-const LEVEL_HEIGHT = 0.4;
-
-// Biomes with richer color ranges
-const BIOMES = {
-  deep_ocean:  { color: [0.03, 0.06, 0.28], level: -2, isWater: true },
-  ocean:       { color: [0.05, 0.12, 0.40], level: -1, isWater: true },
-  shallow:     { color: [0.08, 0.22, 0.50], level: 0,  isWater: true },
-  beach:       { color: [0.78, 0.72, 0.50], level: 0 },
-  grass:       { color: [0.30, 0.50, 0.18], level: 1 },
-  forest:      { color: [0.12, 0.35, 0.08], level: 1 },
-  dense_forest:{ color: [0.08, 0.25, 0.06], level: 2 },
-  highland:    { color: [0.42, 0.38, 0.28], level: 2 },
-  mountain:    { color: [0.50, 0.46, 0.40], level: 3 },
-  snow_peak:   { color: [0.88, 0.90, 0.92], level: 4 },
-  desert:      { color: [0.80, 0.70, 0.38], level: 1 },
-  tundra:      { color: [0.52, 0.56, 0.52], level: 1 },
-};
+// Elevation
+const LAND_Y = 0.0;
+const WATER_Y = -0.35;
+const BEACH_Y = -0.05;
+const CLIFF_DEPTH = 0.6; // how deep land hex sides go
 
 function noise2D(x, y, seed) {
   const n = Math.sin(x * 12.9898 + y * 78.233 + seed * 43.12) * 43758.5453;
@@ -49,375 +35,418 @@ function fbm2D(x, y, seed, octaves = 6) {
   return value / maxValue;
 }
 
-function getBiome(elevation, moisture, temperature) {
-  if (elevation < -0.25) return BIOMES.deep_ocean;
-  if (elevation < -0.08) return BIOMES.ocean;
-  if (elevation < 0.0) return BIOMES.shallow;
-  if (elevation < 0.06) return BIOMES.beach;
-  if (elevation > 0.6) return BIOMES.snow_peak;
-  if (elevation > 0.45) return BIOMES.mountain;
-  if (elevation > 0.32) return BIOMES.highland;
-  if (temperature < 0.22) return BIOMES.tundra;
-  if (moisture < -0.15 && temperature > 0.5) return BIOMES.desert;
-  if (moisture > 0.25 && elevation > 0.15) return BIOMES.dense_forest;
-  if (moisture > 0.1) return BIOMES.forest;
-  return BIOMES.grass;
+function hexToWorld(col, row) {
+  const w = (HEX_RADIUS + GAP) * 2;
+  const h = HEX_H + GAP;
+  const x = col * w * 0.75;
+  const z = row * h + (col % 2 === 1 ? h * 0.5 : 0);
+  const cx = ((COLS - 1) * w * 0.75) / 2;
+  const cz = ((ROWS - 1) * h + h * 0.5) / 2;
+  return [x - cx, z - cz];
 }
 
-// Create detailed hex tile geometry with beveled top surface and textured sides
-function createHexTileGeo(radius) {
+// Create hex prism geometry
+function createHexGeo(radius, depth) {
   const shape = new THREE.Shape();
   for (let i = 0; i < 6; i++) {
     const angle = (Math.PI / 3) * i - Math.PI / 6;
-    const x = radius * Math.cos(angle);
-    const y = radius * Math.sin(angle);
-    if (i === 0) shape.moveTo(x, y);
-    else shape.lineTo(x, y);
+    if (i === 0) shape.moveTo(radius * Math.cos(angle), radius * Math.sin(angle));
+    else shape.lineTo(radius * Math.cos(angle), radius * Math.sin(angle));
   }
   shape.closePath();
-
   const geo = new THREE.ExtrudeGeometry(shape, {
-    depth: 0.5,
+    depth,
     bevelEnabled: true,
-    bevelThickness: 0.06,
-    bevelSize: 0.06,
-    bevelSegments: 2,
+    bevelThickness: 0.04,
+    bevelSize: 0.04,
+    bevelSegments: 1,
   });
   geo.rotateX(-Math.PI / 2);
   return geo;
 }
 
-function hexToWorld(col, row) {
-  const w = (HEX_RADIUS + HEX_GAP) * 2;
-  const h = HEX_HEIGHT_UNIT + HEX_GAP;
-  const x = col * w * 0.75;
-  const z = row * h + (col % 2 === 1 ? h * 0.5 : 0);
-  const cx = ((GRID_COLS - 1) * w * 0.75) / 2;
-  const cz = ((GRID_ROWS - 1) * h + h * 0.5) / 2;
-  return [x - cx, z - cz];
+// Generate coherent island terrain using threshold on noise
+function generateTerrain(seedVal) {
+  const data = [];
+  // Island shape: use low-frequency noise with distance falloff from center
+  for (let col = 0; col < COLS; col++) {
+    for (let row = 0; row < ROWS; row++) {
+      const [wx, wz] = hexToWorld(col, row);
+      // Normalized distance from center (0=center, 1=edge)
+      const maxDist = Math.max(COLS * 0.75, ROWS * HEX_H * 0.5);
+      const dist = Math.sqrt(wx * wx + wz * wz) / maxDist;
+
+      // Island mask: prefer land near center, water near edges
+      const islandNoise = fbm2D(wx * 0.06, wz * 0.06, seedVal, 5);
+      const islandValue = islandNoise - dist * 1.2 + 0.3;
+
+      // Moisture for biome selection
+      const moisture = fbm2D(wx * 0.08 + 50, wz * 0.08 + 50, seedVal + 42, 4);
+
+      let biome;
+      if (islandValue < -0.15) {
+        biome = "water";
+      } else if (islandValue < 0.0) {
+        biome = "coast"; // beach/shallow boundary
+      } else if (islandValue > 0.4) {
+        biome = moisture > 0.1 ? "dense_forest" : "highland";
+      } else if (islandValue > 0.2) {
+        biome = moisture > 0 ? "forest" : "grass";
+      } else {
+        biome = "grass";
+      }
+
+      data.push({ col, row, wx, wz, biome, islandValue, moisture });
+    }
+  }
+  return data;
 }
 
-function HexTerrain({ seed, onSectorHover, onSectorClick }) {
-  const meshRef = useRef();
-  const seedVal = hashString(seed);
+// Biome visual properties
+const BIOME_COLORS = {
+  water:        [0.15, 0.35, 0.65],
+  coast:        [0.72, 0.68, 0.50],
+  grass:        [0.45, 0.62, 0.28],
+  forest:       [0.22, 0.48, 0.18],
+  dense_forest: [0.14, 0.38, 0.12],
+  highland:     [0.48, 0.44, 0.32],
+};
 
-  const hexGeo = useMemo(() => createHexTileGeo(HEX_RADIUS), []);
-  const hexMat = useMemo(
-    () => new THREE.MeshStandardMaterial({ roughness: 0.82, metalness: 0.02, flatShading: true, vertexColors: false }),
-    []
-  );
+function HexTerrain({ hexData, seedVal, onSectorHover, onSectorClick }) {
+  const landRef = useRef();
+  const waterRef = useRef();
 
-  // Compute terrain data
-  const hexData = useMemo(() => {
-    const data = [];
-    for (let col = 0; col < GRID_COLS; col++) {
-      for (let row = 0; row < GRID_ROWS; row++) {
-        const [wx, wz] = hexToWorld(col, row);
-        const nX = wx * 0.09, nZ = wz * 0.09;
-        const elevation = fbm2D(nX, nZ, seedVal, 7);
-        const moisture = fbm2D(nX + 100, nZ + 100, seedVal + 42, 5);
-        const temperature = 1.0 - Math.abs(wz) / ((GRID_ROWS * HEX_HEIGHT_UNIT) / 2);
-        const biome = getBiome(elevation, moisture, temperature);
-        // Smooth level transitions
-        const level = biome.level;
-        const heightJitter = fbm2D(nX * 3, nZ * 3, seedVal + 77, 3) * 0.08;
-        data.push({ col, row, wx, wz, biome, level, elevation, heightJitter });
-      }
-    }
-    return data;
-  }, [seedVal]);
+  const landGeo = useMemo(() => createHexGeo(HEX_RADIUS, CLIFF_DEPTH), []);
+  const landMat = useMemo(() => new THREE.MeshStandardMaterial({
+    roughness: 0.85, metalness: 0.02, flatShading: true,
+  }), []);
+
+  const waterGeo = useMemo(() => createHexGeo(HEX_RADIUS, 0.15), []);
+  const waterMat = useMemo(() => new THREE.MeshStandardMaterial({
+    color: "#1a4a80", roughness: 0.3, metalness: 0.4, flatShading: true,
+  }), []);
+
+  const landHexes = useMemo(() => hexData.filter(d => d.biome !== "water"), [hexData]);
+  const waterHexes = useMemo(() => hexData.filter(d => d.biome === "water"), [hexData]);
+
+  // Index maps for raycasting
+  const landIndexMap = useMemo(() => {
+    const map = new Map();
+    landHexes.forEach((d, i) => {
+      const globalIdx = hexData.indexOf(d);
+      map.set(i, globalIdx);
+    });
+    return map;
+  }, [landHexes, hexData]);
+
+  const waterIndexMap = useMemo(() => {
+    const map = new Map();
+    waterHexes.forEach((d, i) => {
+      const globalIdx = hexData.indexOf(d);
+      map.set(i, globalIdx);
+    });
+    return map;
+  }, [waterHexes, hexData]);
 
   const dummy = useMemo(() => new THREE.Object3D(), []);
 
+  // Place land tiles
   React.useEffect(() => {
-    if (!meshRef.current) return;
-    for (let i = 0; i < CELL_COUNT; i++) {
-      const d = hexData[i];
-      const y = Math.max(0, d.level * LEVEL_HEIGHT + d.heightJitter);
+    if (!landRef.current) return;
+    for (let i = 0; i < landHexes.length; i++) {
+      const d = landHexes[i];
+      const y = d.biome === "coast" ? BEACH_Y : LAND_Y;
       dummy.position.set(d.wx, y, d.wz);
-      // Water tiles are thinner, land tiles vary by elevation
-      const scaleY = d.biome.isWater ? 0.3 : 0.4 + d.level * 0.25;
-      dummy.scale.set(1, Math.max(0.2, scaleY), 1);
+      dummy.scale.set(1, 1, 1);
       dummy.updateMatrix();
-      meshRef.current.setMatrixAt(i, dummy.matrix);
+      landRef.current.setMatrixAt(i, dummy.matrix);
 
-      // Per-hex color variation
-      const h = hashString(`${seedVal}c${i}`);
-      const v = (h % 100) / 600 - 0.08;
-      const [r, g, b] = d.biome.color;
-      meshRef.current.setColorAt(i, new THREE.Color(
-        Math.max(0, Math.min(1, r + v)),
-        Math.max(0, Math.min(1, g + v)),
-        Math.max(0, Math.min(1, b + v))
+      const base = BIOME_COLORS[d.biome] || BIOME_COLORS.grass;
+      const v = (hashString(`${seedVal}c${d.col}${d.row}`) % 100) / 500 - 0.1;
+      landRef.current.setColorAt(i, new THREE.Color(
+        Math.max(0, Math.min(1, base[0] + v)),
+        Math.max(0, Math.min(1, base[1] + v)),
+        Math.max(0, Math.min(1, base[2] + v))
       ));
     }
-    meshRef.current.instanceMatrix.needsUpdate = true;
-    meshRef.current.instanceColor.needsUpdate = true;
-  }, [hexData, seedVal, dummy]);
+    landRef.current.instanceMatrix.needsUpdate = true;
+    landRef.current.instanceColor.needsUpdate = true;
+  }, [landHexes, seedVal, dummy]);
+
+  // Place water tiles
+  React.useEffect(() => {
+    if (!waterRef.current) return;
+    for (let i = 0; i < waterHexes.length; i++) {
+      const d = waterHexes[i];
+      dummy.position.set(d.wx, WATER_Y, d.wz);
+      dummy.scale.set(1, 1, 1);
+      dummy.updateMatrix();
+      waterRef.current.setMatrixAt(i, dummy.matrix);
+    }
+    waterRef.current.instanceMatrix.needsUpdate = true;
+  }, [waterHexes, dummy]);
 
   const { raycaster, pointer, camera } = useThree();
   const [hoveredIdx, setHoveredIdx] = useState(null);
 
   useFrame(() => {
-    if (!meshRef.current) return;
     raycaster.setFromCamera(pointer, camera);
-    const intersects = raycaster.intersectObject(meshRef.current);
-    if (intersects.length > 0) {
-      const idx = intersects[0].instanceId;
-      if (idx !== hoveredIdx) {
-        setHoveredIdx(idx);
-        onSectorHover?.(idx);
-        document.body.style.cursor = "pointer";
+    let foundIdx = null;
+
+    // Check land first
+    if (landRef.current) {
+      const hits = raycaster.intersectObject(landRef.current);
+      if (hits.length > 0) {
+        foundIdx = landIndexMap.get(hits[0].instanceId);
       }
-    } else if (hoveredIdx !== null) {
-      setHoveredIdx(null);
-      onSectorHover?.(null);
-      document.body.style.cursor = "default";
+    }
+    // Then water
+    if (foundIdx === null && waterRef.current) {
+      const hits = raycaster.intersectObject(waterRef.current);
+      if (hits.length > 0) {
+        foundIdx = waterIndexMap.get(hits[0].instanceId);
+      }
     }
 
-    // Update colors — brighten hovered
-    for (let i = 0; i < CELL_COUNT; i++) {
-      const [r, g, b] = hexData[i].biome.color;
-      const h = hashString(`${seedVal}c${i}`);
-      const v = (h % 100) / 600 - 0.08;
-      if (i === hoveredIdx) {
-        meshRef.current.setColorAt(i, new THREE.Color(
-          Math.min(1, r + 0.25), Math.min(1, g + 0.25), Math.min(1, b + 0.25)
-        ));
-      } else {
-        meshRef.current.setColorAt(i, new THREE.Color(
-          Math.max(0, r + v), Math.max(0, g + v), Math.max(0, b + v)
-        ));
-      }
+    if (foundIdx !== hoveredIdx) {
+      setHoveredIdx(foundIdx);
+      onSectorHover?.(foundIdx);
+      document.body.style.cursor = foundIdx !== null ? "pointer" : "default";
     }
-    if (meshRef.current.instanceColor) meshRef.current.instanceColor.needsUpdate = true;
+
+    // Update land colors for hover
+    if (landRef.current) {
+      for (let i = 0; i < landHexes.length; i++) {
+        const globalIdx = landIndexMap.get(i);
+        const d = landHexes[i];
+        const base = BIOME_COLORS[d.biome] || BIOME_COLORS.grass;
+        const v = (hashString(`${seedVal}c${d.col}${d.row}`) % 100) / 500 - 0.1;
+        if (globalIdx === hoveredIdx) {
+          landRef.current.setColorAt(i, new THREE.Color(
+            Math.min(1, base[0] + 0.2), Math.min(1, base[1] + 0.2), Math.min(1, base[2] + 0.2)
+          ));
+        } else {
+          landRef.current.setColorAt(i, new THREE.Color(
+            Math.max(0, base[0] + v), Math.max(0, base[1] + v), Math.max(0, base[2] + v)
+          ));
+        }
+      }
+      landRef.current.instanceColor.needsUpdate = true;
+    }
   });
 
+  const handleClick = useCallback((e) => {
+    e.stopPropagation();
+    // Determine global index from land or water
+    if (landRef.current) {
+      const hits = raycaster.intersectObject(landRef.current);
+      if (hits.length > 0) {
+        const idx = landIndexMap.get(hits[0].instanceId);
+        if (idx != null) onSectorClick?.(idx);
+        return;
+      }
+    }
+    if (waterRef.current) {
+      const hits = raycaster.intersectObject(waterRef.current);
+      if (hits.length > 0) {
+        const idx = waterIndexMap.get(hits[0].instanceId);
+        if (idx != null) onSectorClick?.(idx);
+      }
+    }
+  }, [onSectorClick, landIndexMap, waterIndexMap, raycaster]);
+
   return (
-    <instancedMesh
-      ref={meshRef}
-      args={[hexGeo, hexMat, CELL_COUNT]}
-      castShadow
-      receiveShadow
-      onClick={(e) => {
-        e.stopPropagation();
-        if (e.instanceId != null) onSectorClick?.(e.instanceId);
-      }}
-    />
+    <group onClick={handleClick}>
+      {landHexes.length > 0 && (
+        <instancedMesh ref={landRef} args={[landGeo, landMat, landHexes.length]} castShadow receiveShadow />
+      )}
+      {waterHexes.length > 0 && (
+        <instancedMesh ref={waterRef} args={[waterGeo, waterMat, waterHexes.length]} receiveShadow />
+      )}
+    </group>
   );
 }
 
-// Animated water plane
-function WaterPlane() {
-  const meshRef = useRef();
-  const totalW = GRID_COLS * (HEX_RADIUS + HEX_GAP) * 2 * 0.75 + 6;
-  const totalH = GRID_ROWS * (HEX_HEIGHT_UNIT + HEX_GAP) + 6;
-  const geo = useMemo(() => new THREE.PlaneGeometry(totalW, totalH, 64, 32), [totalW, totalH]);
-
-  useFrame(({ clock }) => {
-    if (!meshRef.current) return;
-    const t = clock.getElapsedTime();
-    const pos = meshRef.current.geometry.attributes.position;
-    for (let i = 0; i < pos.count; i++) {
-      const x = pos.getX(i);
-      const z = pos.getZ(i);
-      pos.setY(i, Math.sin(x * 0.3 + t * 0.8) * 0.03 + Math.cos(z * 0.4 + t * 0.6) * 0.02);
-    }
-    pos.needsUpdate = true;
-  });
-
-  return (
-    <mesh ref={meshRef} geometry={geo} rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.15, 0]}>
-      <meshPhysicalMaterial
-        color="#0a2040"
-        roughness={0.15}
-        metalness={0.6}
-        transparent
-        opacity={0.88}
-        envMapIntensity={0.5}
-      />
-    </mesh>
-  );
-}
-
-// Trees: multiple types (conifer, deciduous, small bush)
-function Trees({ seed, hexData }) {
-  const seedVal = hashString(seed);
-
+// Trees: conifers and deciduous, properly sized
+function Trees({ hexData, seedVal }) {
   const treeData = useMemo(() => {
     const items = [];
-    for (let i = 0; i < hexData.length; i++) {
-      const d = hexData[i];
-      const bName = Object.keys(BIOMES).find(k => BIOMES[k] === d.biome);
-      if (!["grass", "forest", "dense_forest"].includes(bName)) continue;
-      const count = bName === "dense_forest" ? 7 : bName === "forest" ? 4 : 1;
+    for (const d of hexData) {
+      if (!["grass", "forest", "dense_forest"].includes(d.biome)) continue;
+      const count = d.biome === "dense_forest" ? 6 : d.biome === "forest" ? 3 : 1;
       for (let t = 0; t < count; t++) {
-        const h = hashString(`${seedVal}t${i}${t}`);
+        const h = hashString(`${seedVal}t${d.col}${d.row}${t}`);
         const angle = ((h % 360) / 360) * Math.PI * 2;
-        const dist = ((h % 100) / 100) * HEX_RADIUS * 0.55;
+        const dist = ((h % 80) / 80) * HEX_RADIUS * 0.6;
         const x = d.wx + Math.cos(angle) * dist;
         const z = d.wz + Math.sin(angle) * dist;
-        const y = Math.max(0, d.level * LEVEL_HEIGHT + d.heightJitter) + 0.2;
-        const scale = 0.15 + (h % 40) / 100;
-        const type = h % 3; // 0=conifer, 1=deciduous, 2=bush
-        items.push({ x, y, z, scale, type });
+        const scale = 0.6 + (h % 50) / 80;
+        const type = h % 3; // 0=conifer, 1=deciduous, 2=tall conifer
+        items.push({ x, z, scale, type });
       }
     }
     return items;
   }, [hexData, seedVal]);
 
-  // Conifer (tall cone)
-  const coniferGeo = useMemo(() => new THREE.ConeGeometry(0.12, 0.5, 6), []);
-  const coniferMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#1a4510", roughness: 0.9 }), []);
-  // Deciduous (sphere)
-  const decidGeo = useMemo(() => new THREE.SphereGeometry(0.15, 6, 5), []);
-  const decidMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#2a5a18", roughness: 0.85 }), []);
-  // Bush (small sphere)
-  const bushGeo = useMemo(() => new THREE.SphereGeometry(0.08, 5, 4), []);
-  const bushMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#385a20", roughness: 0.9 }), []);
+  // Conifer: cone
+  const coniferGeo = useMemo(() => new THREE.ConeGeometry(0.18, 0.7, 6), []);
+  const coniferMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#1e5c28", roughness: 0.85 }), []);
+  // Deciduous: sphere
+  const decidGeo = useMemo(() => new THREE.SphereGeometry(0.22, 6, 5), []);
+  const decidMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#2e6a20", roughness: 0.8 }), []);
   // Trunks
-  const trunkGeo = useMemo(() => new THREE.CylinderGeometry(0.02, 0.03, 0.2, 4), []);
-  const trunkMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#4a3018", roughness: 0.95 }), []);
+  const trunkGeo = useMemo(() => new THREE.CylinderGeometry(0.03, 0.05, 0.35, 5), []);
+  const trunkMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#5a3a1a", roughness: 0.95 }), []);
 
-  const conifers = useMemo(() => treeData.filter(t => t.type === 0), [treeData]);
+  const conifers = useMemo(() => treeData.filter(t => t.type === 0 || t.type === 2), [treeData]);
   const deciduous = useMemo(() => treeData.filter(t => t.type === 1), [treeData]);
-  const bushes = useMemo(() => treeData.filter(t => t.type === 2), [treeData]);
+  const allTrunks = useMemo(() => [...conifers, ...deciduous], [conifers, deciduous]);
 
   const coniferRef = useRef();
   const decidRef = useRef();
-  const bushRef = useRef();
   const trunkRef = useRef();
   const dummy = useMemo(() => new THREE.Object3D(), []);
 
   React.useEffect(() => {
-    const place = (ref, items, yOff) => {
-      if (!ref.current) return;
-      for (let i = 0; i < items.length; i++) {
-        const t = items[i];
-        dummy.position.set(t.x, t.y + t.scale * yOff, t.z);
+    if (coniferRef.current) {
+      for (let i = 0; i < conifers.length; i++) {
+        const t = conifers[i];
+        const h = t.type === 2 ? t.scale * 1.3 : t.scale;
+        dummy.position.set(t.x, LAND_Y + h * 0.5 + 0.2, t.z);
+        dummy.scale.set(t.scale, h, t.scale);
+        dummy.updateMatrix();
+        coniferRef.current.setMatrixAt(i, dummy.matrix);
+        // Color variation
+        const v = (hashString(`${t.x}${t.z}`) % 40) / 200;
+        coniferRef.current.setColorAt(i, new THREE.Color(0.12 + v, 0.36 + v, 0.16 + v));
+      }
+      coniferRef.current.instanceMatrix.needsUpdate = true;
+      coniferRef.current.instanceColor.needsUpdate = true;
+    }
+    if (decidRef.current) {
+      for (let i = 0; i < deciduous.length; i++) {
+        const t = deciduous[i];
+        dummy.position.set(t.x, LAND_Y + t.scale * 0.5 + 0.3, t.z);
         dummy.scale.setScalar(t.scale);
         dummy.updateMatrix();
-        ref.current.setMatrixAt(i, dummy.matrix);
+        decidRef.current.setMatrixAt(i, dummy.matrix);
+        const v = (hashString(`${t.x}${t.z}d`) % 40) / 200;
+        decidRef.current.setColorAt(i, new THREE.Color(0.18 + v, 0.42 + v, 0.12 + v));
       }
-      ref.current.instanceMatrix.needsUpdate = true;
-    };
-    place(coniferRef, conifers, 1.5);
-    place(decidRef, deciduous, 1.2);
-    place(bushRef, bushes, 0.5);
-
-    // Trunks for conifers + deciduous
+      decidRef.current.instanceMatrix.needsUpdate = true;
+      decidRef.current.instanceColor.needsUpdate = true;
+    }
     if (trunkRef.current) {
-      const trunks = [...conifers, ...deciduous];
-      for (let i = 0; i < trunks.length; i++) {
-        const t = trunks[i];
-        dummy.position.set(t.x, t.y + t.scale * 0.3, t.z);
-        dummy.scale.set(t.scale, t.scale * 1.5, t.scale);
+      for (let i = 0; i < allTrunks.length; i++) {
+        const t = allTrunks[i];
+        dummy.position.set(t.x, LAND_Y + 0.1, t.z);
+        dummy.scale.set(t.scale, t.scale, t.scale);
         dummy.updateMatrix();
         trunkRef.current.setMatrixAt(i, dummy.matrix);
       }
       trunkRef.current.instanceMatrix.needsUpdate = true;
     }
-  }, [conifers, deciduous, bushes, dummy]);
+  }, [conifers, deciduous, allTrunks, dummy]);
 
   return (
     <>
       {conifers.length > 0 && <instancedMesh ref={coniferRef} args={[coniferGeo, coniferMat, conifers.length]} castShadow />}
       {deciduous.length > 0 && <instancedMesh ref={decidRef} args={[decidGeo, decidMat, deciduous.length]} castShadow />}
-      {bushes.length > 0 && <instancedMesh ref={bushRef} args={[bushGeo, bushMat, bushes.length]} castShadow />}
-      {(conifers.length + deciduous.length) > 0 && (
-        <instancedMesh ref={trunkRef} args={[trunkGeo, trunkMat, conifers.length + deciduous.length]} />
-      )}
+      {allTrunks.length > 0 && <instancedMesh ref={trunkRef} args={[trunkGeo, trunkMat, allTrunks.length]} />}
     </>
   );
 }
 
-// Mountain peaks and rocks
-function Mountains({ seed, hexData }) {
-  const seedVal = hashString(seed);
-  const items = useMemo(() => {
-    const result = [];
-    for (let i = 0; i < hexData.length; i++) {
-      const d = hexData[i];
-      const bName = Object.keys(BIOMES).find(k => BIOMES[k] === d.biome);
-      if (!["mountain", "snow_peak", "highland"].includes(bName)) continue;
-      const count = bName === "mountain" ? 3 : bName === "snow_peak" ? 2 : 1;
-      for (let t = 0; t < count; t++) {
-        const h = hashString(`${seedVal}m${i}${t}`);
-        const angle = ((h % 360) / 360) * Math.PI * 2;
-        const dist = ((h % 100) / 100) * HEX_RADIUS * 0.45;
-        const x = d.wx + Math.cos(angle) * dist;
-        const z = d.wz + Math.sin(angle) * dist;
-        const y = Math.max(0, d.level * LEVEL_HEIGHT + d.heightJitter) + 0.2;
-        const scale = 0.25 + (h % 50) / 100;
-        const isSnow = bName === "snow_peak" || h % 4 === 0;
-        result.push({ x, y, z, scale, isSnow });
-      }
+// Simple houses on grass tiles
+function Houses({ hexData, seedVal }) {
+  const houseData = useMemo(() => {
+    const items = [];
+    for (const d of hexData) {
+      if (d.biome !== "grass") continue;
+      const h = hashString(`${seedVal}house${d.col}${d.row}`);
+      if (h % 8 !== 0) continue; // ~12% of grass tiles get a house
+      const angle = ((h % 360) / 360) * Math.PI * 2;
+      const dist = ((h % 60) / 60) * HEX_RADIUS * 0.3;
+      items.push({
+        x: d.wx + Math.cos(angle) * dist,
+        z: d.wz + Math.sin(angle) * dist,
+        rotY: (h % 6) * Math.PI / 3,
+        scale: 0.12 + (h % 30) / 200,
+      });
     }
-    return result;
+    return items;
   }, [hexData, seedVal]);
 
-  const rockPeaks = useMemo(() => items.filter(i => !i.isSnow), [items]);
-  const snowPeaks = useMemo(() => items.filter(i => i.isSnow), [items]);
+  // House body (box)
+  const bodyGeo = useMemo(() => new THREE.BoxGeometry(0.4, 0.3, 0.35), []);
+  const bodyMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#c4a060", roughness: 0.8 }), []);
+  // Roof (pyramid-ish)
+  const roofGeo = useMemo(() => new THREE.ConeGeometry(0.32, 0.25, 4), []);
+  const roofMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#8b3a2a", roughness: 0.75 }), []);
 
-  const peakGeo = useMemo(() => new THREE.ConeGeometry(0.18, 0.6, 5), []);
-  const rockMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#58504a", roughness: 0.92 }), []);
-  const snowMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#dce0e2", roughness: 0.6 }), []);
-
-  const rockRef = useRef();
-  const snowRef = useRef();
+  const bodyRef = useRef();
+  const roofRef = useRef();
   const dummy = useMemo(() => new THREE.Object3D(), []);
 
   React.useEffect(() => {
-    const place = (ref, arr) => {
-      if (!ref.current) return;
-      for (let i = 0; i < arr.length; i++) {
-        const p = arr[i];
-        dummy.position.set(p.x, p.y + p.scale * 0.3, p.z);
-        dummy.scale.setScalar(p.scale);
-        dummy.rotation.y = hashString(`${seedVal}mr${i}`) % 360 * (Math.PI / 180);
+    if (bodyRef.current) {
+      for (let i = 0; i < houseData.length; i++) {
+        const h = houseData[i];
+        dummy.position.set(h.x, LAND_Y + 0.15, h.z);
+        dummy.rotation.set(0, h.rotY, 0);
+        dummy.scale.setScalar(h.scale * 3);
         dummy.updateMatrix();
-        ref.current.setMatrixAt(i, dummy.matrix);
+        bodyRef.current.setMatrixAt(i, dummy.matrix);
       }
-      ref.current.instanceMatrix.needsUpdate = true;
-    };
-    place(rockRef, rockPeaks);
-    place(snowRef, snowPeaks);
-  }, [rockPeaks, snowPeaks, seedVal, dummy]);
+      bodyRef.current.instanceMatrix.needsUpdate = true;
+    }
+    if (roofRef.current) {
+      for (let i = 0; i < houseData.length; i++) {
+        const h = houseData[i];
+        dummy.position.set(h.x, LAND_Y + 0.35, h.z);
+        dummy.rotation.set(0, h.rotY + Math.PI / 4, 0);
+        dummy.scale.setScalar(h.scale * 3);
+        dummy.updateMatrix();
+        roofRef.current.setMatrixAt(i, dummy.matrix);
+      }
+      roofRef.current.instanceMatrix.needsUpdate = true;
+    }
+  }, [houseData, dummy]);
 
+  if (houseData.length === 0) return null;
   return (
     <>
-      {rockPeaks.length > 0 && <instancedMesh ref={rockRef} args={[peakGeo, rockMat, rockPeaks.length]} castShadow />}
-      {snowPeaks.length > 0 && <instancedMesh ref={snowRef} args={[peakGeo, snowMat, snowPeaks.length]} castShadow />}
+      <instancedMesh ref={bodyRef} args={[bodyGeo, bodyMat, houseData.length]} castShadow />
+      <instancedMesh ref={roofRef} args={[roofGeo, roofMat, houseData.length]} castShadow />
     </>
   );
 }
 
-// Rocks scattered on beaches and highlands
-function Rocks({ seed, hexData }) {
-  const seedVal = hashString(seed);
+// Rocks on coast/highland
+function Rocks({ hexData, seedVal }) {
   const items = useMemo(() => {
     const result = [];
-    for (let i = 0; i < hexData.length; i++) {
-      const d = hexData[i];
-      const bName = Object.keys(BIOMES).find(k => BIOMES[k] === d.biome);
-      if (!["beach", "highland", "tundra"].includes(bName)) continue;
-      const count = bName === "highland" ? 3 : 2;
+    for (const d of hexData) {
+      if (!["coast", "highland"].includes(d.biome)) continue;
+      const count = d.biome === "highland" ? 3 : 2;
       for (let t = 0; t < count; t++) {
-        const h = hashString(`${seedVal}r${i}${t}`);
+        const h = hashString(`${seedVal}r${d.col}${d.row}${t}`);
         const angle = ((h % 360) / 360) * Math.PI * 2;
-        const dist = ((h % 100) / 100) * HEX_RADIUS * 0.5;
-        const x = d.wx + Math.cos(angle) * dist;
-        const z = d.wz + Math.sin(angle) * dist;
-        const y = Math.max(0, d.level * LEVEL_HEIGHT + d.heightJitter) + 0.15;
-        const scale = 0.05 + (h % 30) / 200;
-        result.push({ x, y, z, scale });
+        const dist = ((h % 80) / 80) * HEX_RADIUS * 0.5;
+        const y = d.biome === "coast" ? BEACH_Y : LAND_Y;
+        result.push({
+          x: d.wx + Math.cos(angle) * dist,
+          y: y + 0.08,
+          z: d.wz + Math.sin(angle) * dist,
+          scale: 0.08 + (h % 30) / 250,
+        });
       }
     }
     return result;
   }, [hexData, seedVal]);
 
-  const rockGeo = useMemo(() => new THREE.DodecahedronGeometry(0.1, 0), []);
-  const rockMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#6a6560", roughness: 0.95 }), []);
+  const geo = useMemo(() => new THREE.DodecahedronGeometry(0.12, 0), []);
+  const mat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#7a7570", roughness: 0.95 }), []);
   const ref = useRef();
   const dummy = useMemo(() => new THREE.Object3D(), []);
 
@@ -426,34 +455,47 @@ function Rocks({ seed, hexData }) {
     for (let i = 0; i < items.length; i++) {
       const r = items[i];
       dummy.position.set(r.x, r.y, r.z);
-      dummy.scale.setScalar(r.scale);
-      dummy.rotation.set(hashString(`${seedVal}rx${i}`) % 6, hashString(`${seedVal}ry${i}`) % 6, 0);
+      dummy.scale.setScalar(r.scale * 5);
+      dummy.rotation.set(hashString(`${r.x}rx`) % 3, hashString(`${r.z}ry`) % 3, 0);
       dummy.updateMatrix();
       ref.current.setMatrixAt(i, dummy.matrix);
     }
     ref.current.instanceMatrix.needsUpdate = true;
-  }, [items, seedVal, dummy]);
+  }, [items, dummy]);
 
   if (items.length === 0) return null;
-  return <instancedMesh ref={ref} args={[rockGeo, rockMat, items.length]} />;
+  return <instancedMesh ref={ref} args={[geo, mat, items.length]} />;
 }
 
-// Hover tooltip
-function HoverLabel({ hexData, hoveredIdx }) {
-  if (hoveredIdx === null) return null;
-  const d = hexData[hoveredIdx];
-  const bName = Object.keys(BIOMES).find(k => BIOMES[k] === d.biome) || "unknown";
+// Animated water surface
+function WaterSurface() {
+  const ref = useRef();
+  const totalW = COLS * (HEX_RADIUS + GAP) * 2 * 0.75 + 8;
+  const totalH = ROWS * (HEX_H + GAP) + 8;
+  const geo = useMemo(() => new THREE.PlaneGeometry(totalW, totalH, 80, 40), [totalW, totalH]);
+
+  useFrame(({ clock }) => {
+    if (!ref.current) return;
+    const t = clock.getElapsedTime();
+    const pos = ref.current.geometry.attributes.position;
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i);
+      const z = pos.getZ(i);
+      pos.setY(i, Math.sin(x * 0.4 + t * 0.7) * 0.015 + Math.cos(z * 0.5 + t * 0.5) * 0.01);
+    }
+    pos.needsUpdate = true;
+  });
+
   return (
-    <Html position={[d.wx, Math.max(0, d.level * LEVEL_HEIGHT) + 1.5, d.wz]} center style={{ pointerEvents: "none" }}>
-      <div style={{
-        color: "#4df4ff", fontSize: "0.65rem", fontFamily: '"Roboto Mono", monospace',
-        textShadow: "0 0 6px rgba(77, 244, 255, 0.6)", whiteSpace: "nowrap",
-        background: "rgba(10, 6, 30, 0.75)", padding: "3px 10px", borderRadius: 4,
-        border: "1px solid rgba(77, 244, 255, 0.25)",
-      }}>
-        Sector {hoveredIdx} — {bName.replace(/_/g, " ")}
-      </div>
-    </Html>
+    <mesh ref={ref} geometry={geo} rotation={[-Math.PI / 2, 0, 0]} position={[0, WATER_Y - 0.08, 0]}>
+      <meshPhysicalMaterial
+        color="#1a4880"
+        roughness={0.15}
+        metalness={0.5}
+        transparent
+        opacity={0.9}
+      />
+    </mesh>
   );
 }
 
@@ -463,24 +505,7 @@ export default function GlobeView({ onSectorHover }) {
   const seed = `${galaxyId}${starId}${planetId}r${regionId}`;
   const seedVal = hashString(seed);
 
-  const hexData = useMemo(() => {
-    const data = [];
-    for (let col = 0; col < GRID_COLS; col++) {
-      for (let row = 0; row < GRID_ROWS; row++) {
-        const [wx, wz] = hexToWorld(col, row);
-        const nX = wx * 0.09, nZ = wz * 0.09;
-        const elevation = fbm2D(nX, nZ, seedVal, 7);
-        const moisture = fbm2D(nX + 100, nZ + 100, seedVal + 42, 5);
-        const temperature = 1.0 - Math.abs(wz) / ((GRID_ROWS * HEX_HEIGHT_UNIT) / 2);
-        const biome = getBiome(elevation, moisture, temperature);
-        const level = biome.level;
-        const heightJitter = fbm2D(nX * 3, nZ * 3, seedVal + 77, 3) * 0.08;
-        data.push({ col, row, wx, wz, biome, level, elevation, heightJitter });
-      }
-    }
-    return data;
-  }, [seedVal]);
-
+  const hexData = useMemo(() => generateTerrain(seedVal), [seedVal]);
   const [hoveredIdx, setHoveredIdx] = useState(null);
 
   const handleSectorHover = useCallback(
@@ -499,36 +524,59 @@ export default function GlobeView({ onSectorHover }) {
 
   return (
     <>
+      {/* Isometric-style camera: limited rotation, fixed angle */}
       <OrbitControls
-        {...ORBIT_CONTROLS}
-        minDistance={5}
-        maxDistance={45}
-        target={[0, 0.5, 0]}
-        enableZoom enablePan enableRotate
-        dampingFactor={0.05}
-        maxPolarAngle={Math.PI * 0.42}
-        minPolarAngle={Math.PI * 0.1}
+        minDistance={10}
+        maxDistance={50}
+        target={[0, 0, 0]}
+        enableZoom enablePan
+        enableRotate={true}
+        dampingFactor={0.08}
+        enableDamping
+        // Lock to near-isometric angle
+        minPolarAngle={Math.PI * 0.15}
+        maxPolarAngle={Math.PI * 0.38}
+        minAzimuthAngle={-Math.PI * 0.25}
+        maxAzimuthAngle={Math.PI * 0.25}
       />
-      {/* Lighting: key + fill + rim like hex-map-wfc */}
-      <ambientLight intensity={0.35} />
-      <directionalLight position={[-15, 20, 10]} intensity={1.4} castShadow
+
+      {/* Sky-colored background light */}
+      <color attach="background" args={["#87a8c4"]} />
+      <fog attach="fog" args={["#87a8c4", 40, 90]} />
+
+      {/* Lighting: warm key + cool fill */}
+      <ambientLight intensity={0.5} color="#d4e0f0" />
+      <directionalLight
+        position={[-20, 25, 15]} intensity={1.6} color="#fff8e8"
+        castShadow
         shadow-mapSize-width={2048} shadow-mapSize-height={2048}
-        shadow-camera-far={100} shadow-camera-left={-30} shadow-camera-right={30}
-        shadow-camera-top={30} shadow-camera-bottom={-30} shadow-bias={-0.001}
+        shadow-camera-far={80} shadow-camera-left={-25} shadow-camera-right={25}
+        shadow-camera-top={25} shadow-camera-bottom={-25} shadow-bias={-0.001}
       />
-      <directionalLight position={[10, 12, -8]} intensity={0.35} color="#aaccff" />
-      <directionalLight position={[0, 5, 15]} intensity={0.2} color="#ffd4a0" />
-      <Stars radius={500} depth={25} count={800} factor={0.8} saturation={0.4} fade speed={0} />
+      <directionalLight position={[15, 10, -10]} intensity={0.3} color="#8ab4e0" />
 
-      {/* Fog for atmosphere */}
-      <fog attach="fog" args={["#0a0620", 30, 80]} />
+      <WaterSurface />
+      <HexTerrain hexData={hexData} seedVal={seedVal} onSectorHover={handleSectorHover} onSectorClick={handleSectorClick} />
+      <Trees hexData={hexData} seedVal={seedVal} />
+      <Houses hexData={hexData} seedVal={seedVal} />
+      <Rocks hexData={hexData} seedVal={seedVal} />
 
-      <WaterPlane />
-      <HexTerrain seed={seed} onSectorHover={handleSectorHover} onSectorClick={handleSectorClick} />
-      <Trees seed={seed} hexData={hexData} />
-      <Mountains seed={seed} hexData={hexData} />
-      <Rocks seed={seed} hexData={hexData} />
-      <HoverLabel hexData={hexData} hoveredIdx={hoveredIdx} />
+      {/* Hover label */}
+      {hoveredIdx !== null && (() => {
+        const d = hexData[hoveredIdx];
+        const y = d.biome === "water" ? WATER_Y + 0.5 : LAND_Y + 0.8;
+        return (
+          <Html position={[d.wx, y, d.wz]} center style={{ pointerEvents: "none" }}>
+            <div style={{
+              color: "#fff", fontSize: "0.65rem", fontFamily: '"Roboto Mono", monospace',
+              textShadow: "0 1px 3px rgba(0,0,0,0.5)", whiteSpace: "nowrap",
+              background: "rgba(0, 0, 0, 0.5)", padding: "3px 10px", borderRadius: 4,
+            }}>
+              Sector {hoveredIdx} — {d.biome.replace(/_/g, " ")}
+            </div>
+          </Html>
+        );
+      })()}
     </>
   );
 }
