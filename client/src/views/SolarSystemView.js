@@ -84,28 +84,22 @@ function OrbitalPath({ distance }) {
 // Animated planet wrapper
 function OrbitingPlanet({ planet, galaxyId, starId, isSelected, isHovered, onHover, onUnhover, onClick }) {
   const groupRef = useRef();
-  const tilt = planet.orbitTilt || 0;
 
   useFrame(({ clock }) => {
     if (!groupRef.current) return;
     const elapsed = clock.getElapsedTime();
     const angle = -(planet.rotationOffset + planet.rotationSpeed * elapsed * 0.3);
     const x = Math.cos(angle) * planet.distance;
-    const flatZ = Math.sin(angle) * planet.distance;
-    // Apply orbital tilt
-    const y = flatZ * Math.sin(tilt);
-    const z = flatZ * Math.cos(tilt);
-    groupRef.current.position.set(x, y, z);
+    const z = Math.sin(angle) * planet.distance;
+    groupRef.current.position.set(x, 0, z);
   });
 
   const initAngle = -planet.rotationOffset;
   const initX = Math.cos(initAngle) * planet.distance;
-  const initFlatZ = Math.sin(initAngle) * planet.distance;
-  const initY = initFlatZ * Math.sin(tilt);
-  const initZ = initFlatZ * Math.cos(tilt);
+  const initZ = Math.sin(initAngle) * planet.distance;
 
   return (
-    <group ref={groupRef} position={[initX, initY, initZ]}>
+    <group ref={groupRef} position={[initX, 0, initZ]}>
       <ProceduralPlanet
         radius={planet.size}
         seed={planet.seed}
@@ -270,26 +264,21 @@ function SolarSystem({ galaxyId, starId, onPlanetHover, onStarHover }) {
         onClick={handleStarClick}
       />
 
-      {/* Orbital paths - tilted per planet */}
+      {/* Orbital paths + planets - each in a tilted group */}
       {planets.map((planet) => (
-        <group key={`orbit-${planet.id}`} rotation={[planet.orbitTilt || 0, 0, 0]}>
+        <group key={planet.id} rotation={[planet.orbitTilt || 0, 0, 0]}>
           <OrbitalPath distance={planet.distance} />
+          <OrbitingPlanet
+            planet={planet}
+            galaxyId={galaxyId}
+            starId={starId}
+            isSelected={selectedPlanet?.id === planet.id}
+            isHovered={hoveredPlanet?.id === planet.id}
+            onHover={() => setHoveredPlanet(planet)}
+            onUnhover={() => setHoveredPlanet(null)}
+            onClick={() => handlePlanetClick(planet)}
+          />
         </group>
-      ))}
-
-      {/* Planets with animated orbits */}
-      {planets.map((planet) => (
-        <OrbitingPlanet
-          key={planet.id}
-          planet={planet}
-          galaxyId={galaxyId}
-          starId={starId}
-          isSelected={selectedPlanet?.id === planet.id}
-          isHovered={hoveredPlanet?.id === planet.id}
-          onHover={() => setHoveredPlanet(planet)}
-          onUnhover={() => setHoveredPlanet(null)}
-          onClick={() => handlePlanetClick(planet)}
-        />
       ))}
     </group>
   );
