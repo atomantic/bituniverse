@@ -5,12 +5,14 @@ export default function RegionView({ onChildHover }) {
   return (
     <TerrainTileView
       level="area"
-      gridSize={20}
-      cameraHeight={40}
-      cameraAngle={-Math.PI / 2.5}
-      noiseScale={0.06}
-      noiseOctaves={5}
-      heightScale={5}
+      gridCols={20}
+      gridRows={10}
+      hexRadius={0.9}
+      hexDepth={0.18}
+      cameraHeight={22}
+      noiseScale={0.1}
+      noiseOctaves={6}
+      heightScale={0.2}
       onChildHover={onChildHover}
     />
   );

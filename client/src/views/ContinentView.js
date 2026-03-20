@@ -5,12 +5,14 @@ export default function ContinentView({ onChildHover }) {
   return (
     <TerrainTileView
       level="sector"
-      gridSize={20}
-      cameraHeight={60}
-      cameraAngle={-Math.PI / 2.2}
-      noiseScale={0.03}
-      noiseOctaves={4}
-      heightScale={8}
+      gridCols={20}
+      gridRows={10}
+      hexRadius={1.0}
+      hexDepth={0.25}
+      cameraHeight={30}
+      noiseScale={0.07}
+      noiseOctaves={5}
+      heightScale={0.35}
       onChildHover={onChildHover}
     />
   );
