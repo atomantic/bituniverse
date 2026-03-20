@@ -23,8 +23,10 @@ function generatePlanetData(galaxyId, starId) {
     // Distribute planets with increasing spacing (like real solar systems)
     const baseDistance = 15 + i * 12 + (parseInt(planetSeed.slice(-2), 10) % 8); // 15-135, well-spaced
     const rotationSpeed = 0.1 + (parseInt(planetSeed.slice(-3), 10) % 20) / 100; // 0.1-0.3
-    const rotationOffset =
-      (parseInt(planetSeed.slice(-3), 10) % 360) * (Math.PI / 180); // Random starting rotation
+    // Use a simple hash to get well-distributed starting angles
+    let hash = 0;
+    for (let j = 0; j < planetSeed.length; j++) hash = ((hash << 5) - hash + planetSeed.charCodeAt(j)) | 0;
+    const rotationOffset = (Math.abs(hash) % 360) * (Math.PI / 180);
 
     // Get size range for planet type
     const [minSize, maxSize] = planetType.sizeRange;
