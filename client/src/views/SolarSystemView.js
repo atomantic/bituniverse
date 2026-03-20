@@ -20,7 +20,8 @@ function generatePlanetData(galaxyId, starId) {
   for (let i = 0; i < 10; i++) {
     const planetSeed = `${baseSeed}${i}`;
     const planetType = getRandomPlanetType(planetSeed);
-    const distance = 40 + (parseInt(planetSeed.slice(-2), 10) % 60); // 40-100 units from star
+    // Distribute planets with increasing spacing (like real solar systems)
+    const baseDistance = 15 + i * 12 + (parseInt(planetSeed.slice(-2), 10) % 8); // 15-135, well-spaced
     const rotationSpeed = 0.1 + (parseInt(planetSeed.slice(-3), 10) % 20) / 100; // 0.1-0.3
     const rotationOffset =
       (parseInt(planetSeed.slice(-3), 10) % 360) * (Math.PI / 180); // Random starting rotation
@@ -34,11 +35,15 @@ function generatePlanetData(galaxyId, starId) {
     // Generate color based on planet type
     const color = generatePlanetColor(planetType, planetSeed);
 
+    // Orbital inclination - each planet on a slightly different plane
+    const orbitTilt = ((parseInt(planetSeed.slice(-4, -2), 10) % 30) - 15) * (Math.PI / 180); // ±15 degrees
+
     planets.push({
       id: i,
       type: planetType.id,
       name: planetType.name,
-      distance,
+      distance: baseDistance,
+      orbitTilt,
       size,
       rotationSpeed,
       rotationOffset,
@@ -79,23 +84,28 @@ function OrbitalPath({ distance }) {
 // Animated planet wrapper
 function OrbitingPlanet({ planet, galaxyId, starId, isSelected, isHovered, onHover, onUnhover, onClick }) {
   const groupRef = useRef();
+  const tilt = planet.orbitTilt || 0;
 
   useFrame(({ clock }) => {
     if (!groupRef.current) return;
     const elapsed = clock.getElapsedTime();
     const angle = -(planet.rotationOffset + planet.rotationSpeed * elapsed * 0.3);
     const x = Math.cos(angle) * planet.distance;
-    const z = Math.sin(angle) * planet.distance;
-    groupRef.current.position.set(x, 0, z);
+    const flatZ = Math.sin(angle) * planet.distance;
+    // Apply orbital tilt
+    const y = flatZ * Math.sin(tilt);
+    const z = flatZ * Math.cos(tilt);
+    groupRef.current.position.set(x, y, z);
   });
 
-  // Initial position
   const initAngle = -planet.rotationOffset;
   const initX = Math.cos(initAngle) * planet.distance;
-  const initZ = Math.sin(initAngle) * planet.distance;
+  const initFlatZ = Math.sin(initAngle) * planet.distance;
+  const initY = initFlatZ * Math.sin(tilt);
+  const initZ = initFlatZ * Math.cos(tilt);
 
   return (
-    <group ref={groupRef} position={[initX, 0, initZ]}>
+    <group ref={groupRef} position={[initX, initY, initZ]}>
       <ProceduralPlanet
         radius={planet.size}
         seed={planet.seed}
@@ -185,8 +195,8 @@ function SolarSystem({ galaxyId, starId, onPlanetHover, onStarHover }) {
     const controls = new OrbitControls(camera, gl.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
-    controls.minDistance = 20;
-    controls.maxDistance = 100;
+    controls.minDistance = 10;
+    controls.maxDistance = 300;
     controls.target.set(0, 0, 0);
     controls.update();
     controlsRef.current = controls;
@@ -199,7 +209,7 @@ function SolarSystem({ galaxyId, starId, onPlanetHover, onStarHover }) {
   useEffect(() => {
     if (!camera) return;
     // Position camera at a 45-degree angle
-    camera.position.set(40, 50, 40);
+    camera.position.set(80, 100, 80);
     camera.lookAt(0, 0, 0);
     camera.up.set(0, 1, 0);
   }, [camera]);
@@ -260,9 +270,11 @@ function SolarSystem({ galaxyId, starId, onPlanetHover, onStarHover }) {
         onClick={handleStarClick}
       />
 
-      {/* Orbital paths */}
+      {/* Orbital paths - tilted per planet */}
       {planets.map((planet) => (
-        <OrbitalPath key={`orbit-${planet.id}`} distance={planet.distance} />
+        <group key={`orbit-${planet.id}`} rotation={[planet.orbitTilt || 0, 0, 0]}>
+          <OrbitalPath distance={planet.distance} />
+        </group>
       ))}
 
       {/* Planets with animated orbits */}

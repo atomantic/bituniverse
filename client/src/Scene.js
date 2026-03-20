@@ -293,20 +293,24 @@ function SceneContent({
         factor={4} saturation={1.5} fade speed={0.0005} color="#ffffff"
       />
 
-      <OrbitControls
-        ref={controlsRef}
-        {...ORBIT_CONTROLS}
-        onEnd={(e) => {
-          if (DEBUG_LOGGING) {
-            const controls = e.target;
-            const cam = controls.object;
-            console.log("Camera position:", JSON.stringify({
-              position: [cam.position.x, cam.position.y, cam.position.z],
-              lookAt: controls.target,
-            }));
-          }
-        }}
-      />
+      {/* Only render Scene-level OrbitControls for galaxy/solarSystem views.
+          All other views provide their own OrbitControls with appropriate zoom limits. */}
+      {(view === "galaxy" || view === "solarSystem") && (
+        <OrbitControls
+          ref={controlsRef}
+          {...ORBIT_CONTROLS}
+          onEnd={(e) => {
+            if (DEBUG_LOGGING) {
+              const controls = e.target;
+              const cam = controls.object;
+              console.log("Camera position:", JSON.stringify({
+                position: [cam.position.x, cam.position.y, cam.position.z],
+                lookAt: controls.target,
+              }));
+            }
+          }}
+        />
+      )}
 
       {view === "galaxy" ? (
         <GalaxiesView galaxyIndex={baseKeyOffset} onStarHover={onStarHover} />

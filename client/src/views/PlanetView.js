@@ -267,7 +267,7 @@ export default function PlanetView({ onPlanetHover, onRegionHover }) {
     <>
       <OrbitControls
         {...ORBIT_CONTROLS}
-        minDistance={planetRadius * 0.3}
+        minDistance={planetRadius * 0.1}
         maxDistance={1000}
         maxPolarAngle={Math.PI}
         target={[0, 0, 0]}
