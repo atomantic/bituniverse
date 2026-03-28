@@ -36,6 +36,7 @@ import {
 import ScaleContextWidget from "./components/ScaleContextWidget";
 import GuidedTour from "./components/GuidedTour";
 import KeyLookup from "./components/KeyLookup";
+import ShareOverlay from "./components/ShareOverlay";
 import ControlsOverlay from "./components/ControlsOverlay";
 import BreadcrumbNav from "./components/BreadcrumbNav";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
@@ -92,6 +93,7 @@ function SceneContent({
   setIsInfoVisible,
   setIsTourActive,
   setIsKeyLookupActive,
+  setIsShareActive,
   onGalaxySelect,
   onStarHover,
   onPlanetHover,
@@ -163,6 +165,7 @@ function SceneContent({
       [KEYBOARD_ACTIONS.TOGGLE_INFO]: () => setIsInfoVisible((prev) => !prev),
       [KEYBOARD_ACTIONS.TOGGLE_TOUR]: () => setIsTourActive((prev) => !prev),
       [KEYBOARD_ACTIONS.TOGGLE_KEY_LOOKUP]: () => setIsKeyLookupActive((prev) => !prev),
+      [KEYBOARD_ACTIONS.SHARE_LOCATION]: () => setIsShareActive((prev) => !prev),
       [KEYBOARD_ACTIONS.NAVIGATE_LEFT]: () => {
         if (deepIdx > 0) {
           const paramName = PARAM_NAMES[deepIdx];
@@ -279,7 +282,7 @@ function SceneContent({
     const handleKeyPress = createKeyboardListener(handlers);
     window.addEventListener("keydown", handleKeyPress);
     return () => window.removeEventListener("keydown", handleKeyPress);
-  }, [baseKeyOffset, onKeyOffsetChange, navigate, camera, setIsControlsVisible, setIsInfoVisible, setIsTourActive, setIsKeyLookupActive, onGalaxySelect, view, params, hoveredChild, galaxyId, starId, planetId]);
+  }, [baseKeyOffset, onKeyOffsetChange, navigate, camera, setIsControlsVisible, setIsInfoVisible, setIsTourActive, setIsKeyLookupActive, setIsShareActive, onGalaxySelect, view, params, hoveredChild, galaxyId, starId, planetId]);
 
   return (
     <>
@@ -375,6 +378,7 @@ function Scene({ baseKeyOffset, onKeyOffsetChange, view = "galaxy" }) {
   const [hoveredString, setHoveredString] = useState(null);
   const [isTourActive, setIsTourActive] = useState(false);
   const [isKeyLookupActive, setIsKeyLookupActive] = useState(false);
+  const [isShareActive, setIsShareActive] = useState(false);
 
   const handleDeepHover = useCallback((idx) => {
     setHoveredChild(idx);
@@ -472,6 +476,7 @@ function Scene({ baseKeyOffset, onKeyOffsetChange, view = "galaxy" }) {
           setIsInfoVisible={setIsInfoVisible}
           setIsTourActive={setIsTourActive}
           setIsKeyLookupActive={setIsKeyLookupActive}
+          setIsShareActive={setIsShareActive}
           onGalaxySelect={setSelectedBody}
           onStarHover={handleStarSelect}
           onPlanetHover={handlePlanetSelect}
@@ -555,6 +560,12 @@ function Scene({ baseKeyOffset, onKeyOffsetChange, view = "galaxy" }) {
               [F] Find Key
             </Typography>
             <Typography
+              onClick={() => setIsShareActive((v) => !v)}
+              sx={{ color: isShareActive ? "var(--theme-secondary)" : "var(--theme-accent)", fontSize: "0.5rem", opacity: isShareActive ? 0.8 : 0.4, cursor: "pointer", userSelect: "none", "&:hover": { opacity: 0.8 } }}
+            >
+              [S] Share
+            </Typography>
+            <Typography
               onClick={() => setIsControlsVisible((v) => !v)}
               sx={{ color: "var(--theme-accent)", fontSize: "0.5rem", opacity: 0.4, cursor: "pointer", userSelect: "none", "&:hover": { opacity: 0.8 } }}
             >
@@ -567,6 +578,7 @@ function Scene({ baseKeyOffset, onKeyOffsetChange, view = "galaxy" }) {
       <ControlsOverlay isVisible={isControlsVisible} />
       <GuidedTour active={isTourActive} onExit={() => setIsTourActive(false)} />
       <KeyLookup active={isKeyLookupActive} onClose={() => setIsKeyLookupActive(false)} />
+      <ShareOverlay active={isShareActive} onClose={() => setIsShareActive(false)} view={view} />
     </Box>
   );
 }
