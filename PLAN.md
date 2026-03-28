@@ -47,3 +47,20 @@ Math: 10^7 x 8 + 10^5 = 10^61
 ### Files Deleted
 - `client/src/views/SurfaceView.js` - Replaced by GlobeView + GroundView
 - `client/src/components/SurfaceInfoPanel.js` - Replaced by DeepZoomWidgets
+
+---
+
+## v2.0 — Educational Depth (In Progress)
+
+### Scale Context Widget - DONE
+Educational overlays at every zoom level showing physical analogies, probability context, and perspective facts. Addresses GOALS.md v2.0 "contextual education" and "probability context" milestones.
+
+- Each of the 12 view levels has curated content: scale analogy, probability of finding a used Bitcoin key, and an expandable "perspective" fact
+- Renders in the right-side HUD column alongside existing keyspace/planet widgets
+- Collapsible "More/Less" toggle keeps the UI clean while offering depth
+
+#### Files Created
+- `client/src/components/ScaleContextWidget.js` - Scale context cards for all 12 zoom levels
+
+#### Files Modified
+- `client/src/Scene.js` - Imported and rendered ScaleContextWidget in right HUD column

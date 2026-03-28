@@ -1,0 +1,216 @@
+import React, { useState } from "react";
+import { Typography } from "@mui/material";
+import HudWidget, { SectionLabel } from "./HudWidget";
+
+// Educational content for each view level
+// Physical analogies, probability of finding a used Bitcoin key, and perspective facts
+// ~450 million Bitcoin addresses exist ≈ 4.5 × 10^8 out of 2^256 ≈ 1.16 × 10^77 total keys
+const SCALE_CONTENT = {
+  galaxy: {
+    title: "Galaxy Scale",
+    keysLabel: "~10\u2076\u2075 keys per galaxy",
+    analogy:
+      "This galaxy contains more keys than the number of atoms in a trillion Suns.",
+    probability:
+      "Only ~1 in 2,000 galaxies contains even a single used Bitcoin address.",
+    perspective:
+      "If every person on Earth checked a billion keys per second since the Big Bang, they wouldn\u2019t have covered a billionth of this galaxy.",
+  },
+  solarSystem: {
+    title: "Star System Scale",
+    keysLabel: "~10\u2076\u00B2 keys per star",
+    analogy:
+      "Each star system holds more keys than there are grains of sand on a trillion trillion Earths.",
+    probability:
+      "The chance a used key exists in this star system is roughly 1 in 2 million.",
+    perspective:
+      "Every computer on Earth working together couldn\u2019t search this star system in 10\u00B3\u2070 universe lifetimes.",
+  },
+  planet: {
+    title: "Planet Scale",
+    keysLabel: "~10\u2076\u00B9 keys per planet",
+    analogy:
+      "One planet holds more keys than all the atoms in 10 billion human bodies.",
+    probability:
+      "You\u2019d need to search ~10 billion planets to find one containing a used key.",
+    perspective:
+      "Each planet\u2019s keyspace is a haystack so vast that the needle might not even be in this galaxy.",
+  },
+  map: {
+    title: "Region Scale",
+    keysLabel: "~10\u2075\u2074 keys per region",
+    analogy:
+      "This region contains more keys than the number of atoms in all the oceans on Earth.",
+    probability:
+      "Finding a used key here is like picking one specific atom from 100 billion Earths.",
+    perspective:
+      "All Bitcoin transactions ever occupy less keyspace than a single electron occupies in the observable universe.",
+  },
+  sector: {
+    title: "Sector Scale",
+    keysLabel: "~10\u2074\u2077 keys per sector",
+    analogy:
+      "More keys in this sector than water molecules in all of Earth\u2019s oceans.",
+    probability:
+      "Better odds of winning the lottery 5 times in a row than finding a used key here.",
+    perspective:
+      "If the ocean were the keyspace, a used key would be one molecule somewhere in the Pacific.",
+  },
+  region: {
+    title: "Area Scale",
+    keysLabel: "~10\u2074\u2070 keys per area",
+    analogy:
+      "More keys here than there are bacteria on the entire planet Earth.",
+    probability:
+      "Odds of a used key: 1 in 10\u00B3\u00B2 \u2014 a 1 followed by 32 zeros.",
+    perspective:
+      "Harder than shuffling a deck of cards into the exact same order \u2014 twice in a row.",
+  },
+  area: {
+    title: "Ground Scale",
+    keysLabel: "~10\u00B3\u00B3 keys per ground",
+    analogy:
+      "As many keys as molecules in an Olympic swimming pool.",
+    probability:
+      "A supercomputer checking a trillion keys/sec would need 700\u00D7 the age of the universe.",
+    perspective:
+      "We\u2019re still nowhere close. Bitcoin\u2019s security relies on this absurd emptiness.",
+  },
+  ground: {
+    title: "Grain Scale",
+    keysLabel: "~10\u00B2\u2076 keys per grain",
+    analogy:
+      "Each grain holds roughly as many keys as stars in the observable universe \u2014 times a hundred.",
+    probability:
+      "Like finding one marked star among every galaxy visible from Earth.",
+    perspective:
+      "You could search a grain per second for a billion years and never find a used key.",
+  },
+  grain: {
+    title: "Molecule Scale",
+    keysLabel: "~10\u00B9\u2079 keys per molecule",
+    analogy:
+      "About as many keys as grains of sand on all of Earth \u2014 10 quintillion.",
+    probability:
+      "Finding a used key is like picking one specific grain of sand on the entire planet.",
+    perspective:
+      "The metaphor comes full circle: each molecule holds an Earth\u2019s worth of sand in keys.",
+  },
+  molecule: {
+    title: "Atom Scale",
+    keysLabel: "~10\u00B9\u00B2 keys per atom",
+    analogy:
+      "About a trillion keys \u2014 roughly the number of trees on Earth.",
+    probability:
+      "Even this deep, odds of a used key remain 1 in 10\u2076\u2078. Effectively zero.",
+    perspective:
+      "Eight levels deep and the keyspace is still astronomically empty.",
+  },
+  atom: {
+    title: "Quark Scale",
+    keysLabel: "~10\u2075 keys per quark",
+    analogy:
+      "Just 100,000 keys \u2014 a number you can almost comprehend.",
+    probability:
+      "The chance any of these keys is a used Bitcoin address: ~1 in 10\u2076\u00B3.",
+    perspective:
+      "Every key here has almost certainly never been generated by anyone, ever.",
+  },
+  quark: {
+    title: "String Scale",
+    keysLabel: "1 key per string",
+    analogy:
+      "Each string is a unique 256-bit number \u2014 one point in the entire keyspace.",
+    probability:
+      "This key being a used Bitcoin address: 1 in 10\u2076\u2078. The universe would end first.",
+    perspective:
+      "You\u2019ve reached the bottom. This key, out of 2\u00B2\u2075\u2076, has almost certainly never existed before.",
+  },
+};
+
+export default function ScaleContextWidget({ view }) {
+  const content = SCALE_CONTENT[view];
+  const [expanded, setExpanded] = useState(false);
+
+  if (!content) return null;
+
+  return (
+    <HudWidget>
+      <Typography
+        sx={{
+          color: "var(--theme-secondary)",
+          fontSize: "0.8rem",
+          fontWeight: 600,
+          lineHeight: 1.2,
+        }}
+      >
+        {content.title}
+      </Typography>
+      <Typography
+        sx={{
+          color: "var(--theme-accent)",
+          fontSize: "0.55rem",
+          mb: 0.5,
+          opacity: 0.7,
+        }}
+      >
+        {content.keysLabel}
+      </Typography>
+
+      <SectionLabel>Scale</SectionLabel>
+      <Typography
+        sx={{
+          color: "var(--theme-text)",
+          fontSize: "0.55rem",
+          lineHeight: 1.5,
+          opacity: 0.85,
+        }}
+      >
+        {content.analogy}
+      </Typography>
+
+      <SectionLabel>Probability</SectionLabel>
+      <Typography
+        sx={{
+          color: "var(--theme-text)",
+          fontSize: "0.55rem",
+          lineHeight: 1.5,
+          opacity: 0.85,
+        }}
+      >
+        {content.probability}
+      </Typography>
+
+      {expanded && (
+        <>
+          <SectionLabel>Perspective</SectionLabel>
+          <Typography
+            sx={{
+              color: "var(--theme-text)",
+              fontSize: "0.55rem",
+              lineHeight: 1.5,
+              opacity: 0.85,
+            }}
+          >
+            {content.perspective}
+          </Typography>
+        </>
+      )}
+
+      <Typography
+        onClick={() => setExpanded((v) => !v)}
+        sx={{
+          color: "var(--theme-secondary)",
+          fontSize: "0.5rem",
+          mt: 0.75,
+          cursor: "pointer",
+          opacity: 0.5,
+          userSelect: "none",
+          "&:hover": { opacity: 0.9 },
+        }}
+      >
+        {expanded ? "\u25B2 Less" : "\u25BC More"}
+      </Typography>
+    </HudWidget>
+  );
+}

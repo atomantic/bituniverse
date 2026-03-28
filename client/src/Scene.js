@@ -33,6 +33,7 @@ import {
   AtomWidget,
   QuarkWidget,
 } from "./components/DeepZoomWidgets";
+import ScaleContextWidget from "./components/ScaleContextWidget";
 import ControlsOverlay from "./components/ControlsOverlay";
 import BreadcrumbNav from "./components/BreadcrumbNav";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
@@ -508,6 +509,7 @@ function Scene({ baseKeyOffset, onKeyOffsetChange, view = "galaxy" }) {
               {view === "galaxy" && <GalaxyKeyspaceWidget selectedBody={selectedBody} />}
               {view === "solarSystem" && selectedPlanet && <PlanetHoverWidget selectedPlanet={selectedPlanet} />}
               {view === "planet" && selectedPlanet && <PlanetDetailWidget selectedPlanet={selectedPlanet} />}
+              <ScaleContextWidget view={view} />
             </Box>
           )}
         </Box>
