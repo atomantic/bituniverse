@@ -121,3 +121,22 @@ Session-scoped exploration history that tracks every location visited and allows
 - `client/src/Scene.js` - Imported NavigationHistory, added history state/tracking effect, wired [H] History button in bottom bar
 - `client/src/utils/keyboardManager.js` - Added TOGGLE_HISTORY action and H shortcut
 - `client/src/components/ControlsOverlay.js` - Added H shortcut to controls reference
+
+### Brute Force Calculator - DONE
+Interactive overlay that lets users experiment with computing power scenarios to understand why brute-forcing a 256-bit key is physically impossible. Addresses GOALS.md mission ("let people feel why brute-forcing a private key is impossible") and v2.0 "probability context" milestone.
+
+- 5 computing power presets: single laptop through "every atom in the universe is a computer"
+- Time slider from 1 second to 10^70 universe ages
+- Real-time results: keys checked, keyspace coverage percentage, time to search all keys
+- Visual progress bar (always imperceptibly thin — that's the educational point)
+- Dynamic insight text adapts to the scenario, explaining physics limits (Landauer bound, thermodynamics)
+- Accessible via [B] button in bottom bar or B keyboard shortcut
+- Escape closes; click outside to dismiss
+
+#### Files Created
+- `client/src/components/BruteForceCalculator.js` - Interactive calculator with presets, time slider, results, and dynamic insights
+
+#### Files Modified
+- `client/src/Scene.js` - Imported BruteForceCalculator, added state, wired [B] Brute Force button in bottom bar
+- `client/src/utils/keyboardManager.js` - Added TOGGLE_BRUTE_FORCE action and B shortcut
+- `client/src/components/ControlsOverlay.js` - Added B shortcut to controls reference

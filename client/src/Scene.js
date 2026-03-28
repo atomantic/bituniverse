@@ -38,6 +38,7 @@ import GuidedTour from "./components/GuidedTour";
 import KeyLookup from "./components/KeyLookup";
 import ShareOverlay from "./components/ShareOverlay";
 import NavigationHistory from "./components/NavigationHistory";
+import BruteForceCalculator from "./components/BruteForceCalculator";
 import ControlsOverlay from "./components/ControlsOverlay";
 import BreadcrumbNav from "./components/BreadcrumbNav";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
@@ -96,6 +97,7 @@ function SceneContent({
   setIsKeyLookupActive,
   setIsShareActive,
   setIsHistoryActive,
+  setIsBruteForceActive,
   onGalaxySelect,
   onStarHover,
   onPlanetHover,
@@ -169,6 +171,7 @@ function SceneContent({
       [KEYBOARD_ACTIONS.TOGGLE_KEY_LOOKUP]: () => setIsKeyLookupActive((prev) => !prev),
       [KEYBOARD_ACTIONS.SHARE_LOCATION]: () => setIsShareActive((prev) => !prev),
       [KEYBOARD_ACTIONS.TOGGLE_HISTORY]: () => setIsHistoryActive((prev) => !prev),
+      [KEYBOARD_ACTIONS.TOGGLE_BRUTE_FORCE]: () => setIsBruteForceActive((prev) => !prev),
       [KEYBOARD_ACTIONS.NAVIGATE_LEFT]: () => {
         if (deepIdx > 0) {
           const paramName = PARAM_NAMES[deepIdx];
@@ -285,7 +288,7 @@ function SceneContent({
     const handleKeyPress = createKeyboardListener(handlers);
     window.addEventListener("keydown", handleKeyPress);
     return () => window.removeEventListener("keydown", handleKeyPress);
-  }, [baseKeyOffset, onKeyOffsetChange, navigate, camera, setIsControlsVisible, setIsInfoVisible, setIsTourActive, setIsKeyLookupActive, setIsShareActive, setIsHistoryActive, onGalaxySelect, view, params, hoveredChild, galaxyId, starId, planetId]);
+  }, [baseKeyOffset, onKeyOffsetChange, navigate, camera, setIsControlsVisible, setIsInfoVisible, setIsTourActive, setIsKeyLookupActive, setIsShareActive, setIsHistoryActive, setIsBruteForceActive, onGalaxySelect, view, params, hoveredChild, galaxyId, starId, planetId]);
 
   return (
     <>
@@ -383,6 +386,7 @@ function Scene({ baseKeyOffset, onKeyOffsetChange, view = "galaxy" }) {
   const [isKeyLookupActive, setIsKeyLookupActive] = useState(false);
   const [isShareActive, setIsShareActive] = useState(false);
   const [isHistoryActive, setIsHistoryActive] = useState(false);
+  const [isBruteForceActive, setIsBruteForceActive] = useState(false);
   const [navHistory, setNavHistory] = useState([]);
   const location = useLocation();
   const historyIdRef = useRef(0);
@@ -523,6 +527,7 @@ function Scene({ baseKeyOffset, onKeyOffsetChange, view = "galaxy" }) {
           setIsKeyLookupActive={setIsKeyLookupActive}
           setIsShareActive={setIsShareActive}
           setIsHistoryActive={setIsHistoryActive}
+          setIsBruteForceActive={setIsBruteForceActive}
           onGalaxySelect={setSelectedBody}
           onStarHover={handleStarSelect}
           onPlanetHover={handlePlanetSelect}
@@ -618,6 +623,12 @@ function Scene({ baseKeyOffset, onKeyOffsetChange, view = "galaxy" }) {
               [H] History
             </Typography>
             <Typography
+              onClick={() => setIsBruteForceActive((v) => !v)}
+              sx={{ color: isBruteForceActive ? "var(--theme-secondary)" : "var(--theme-accent)", fontSize: "0.5rem", opacity: isBruteForceActive ? 0.8 : 0.4, cursor: "pointer", userSelect: "none", "&:hover": { opacity: 0.8 } }}
+            >
+              [B] Brute Force
+            </Typography>
+            <Typography
               onClick={() => setIsControlsVisible((v) => !v)}
               sx={{ color: "var(--theme-accent)", fontSize: "0.5rem", opacity: 0.4, cursor: "pointer", userSelect: "none", "&:hover": { opacity: 0.8 } }}
             >
@@ -632,6 +643,7 @@ function Scene({ baseKeyOffset, onKeyOffsetChange, view = "galaxy" }) {
       <KeyLookup active={isKeyLookupActive} onClose={() => setIsKeyLookupActive(false)} />
       <ShareOverlay active={isShareActive} onClose={() => setIsShareActive(false)} view={view} />
       <NavigationHistory active={isHistoryActive} onClose={() => setIsHistoryActive(false)} history={navHistory} currentPath={location.pathname} />
+      <BruteForceCalculator active={isBruteForceActive} onClose={() => setIsBruteForceActive(false)} />
     </Box>
   );
 }
