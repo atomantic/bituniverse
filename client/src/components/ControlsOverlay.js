@@ -65,6 +65,7 @@ export default function ControlsOverlay({ isVisible }) {
         <ControlRow keys="H" action="Navigation History" />
         <ControlRow keys="B" action="Brute Force Calculator" />
         <ControlRow keys="A" action="Auto-Explore" />
+        <ControlRow keys="K" action="Bookmarks" />
         <ControlRow keys="C" action="Toggle Controls" />
         <ControlRow keys="I" action="Toggle HUD" />
       </Box>

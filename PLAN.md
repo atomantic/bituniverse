@@ -159,3 +159,24 @@ Auto-pilot that navigates through random paths in the keyspace hierarchy, pausin
 - `client/src/Scene.js` - Imported AutoExplore, added state, wired [A] Auto-Explore button in bottom bar
 - `client/src/utils/keyboardManager.js` - Added TOGGLE_AUTO_EXPLORE action and A shortcut
 - `client/src/components/ControlsOverlay.js` - Added A shortcut to controls reference
+
+### Bookmarks - DONE
+Persistent saved locations using localStorage that let users bookmark interesting keyspace locations and revisit them across sessions. Supports the GOALS.md long-term vision of being "shown in classrooms" by letting educators prepare demos, and complements the session-only Navigation History with permanent saves.
+
+- Bookmarks persist across browser sessions via localStorage
+- Add current location with one click; duplicate detection prevents re-adding
+- Rename bookmarks with inline editing for custom labels
+- Delete individual bookmarks on hover
+- Click any bookmark to navigate directly to that location
+- Reverse-chronological display with date stamps and view-level icons
+- Visual depth indentation mirrors the zoom hierarchy
+- Accessible via [K] button in bottom bar or K keyboard shortcut
+- Escape closes; click outside to dismiss
+
+#### Files Created
+- `client/src/components/Bookmarks.js` - Bookmarks overlay with localStorage persistence, inline rename, delete, and navigation
+
+#### Files Modified
+- `client/src/Scene.js` - Imported Bookmarks, added state, extracted currentLabel memo, wired [K] Bookmarks button in bottom bar
+- `client/src/utils/keyboardManager.js` - Added TOGGLE_BOOKMARKS action and K shortcut
+- `client/src/components/ControlsOverlay.js` - Added K shortcut to controls reference
