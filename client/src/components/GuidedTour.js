@@ -1,0 +1,315 @@
+import React, { useState, useEffect, useCallback } from "react";
+import { Box, Typography } from "@mui/material";
+import { useNavigate } from "react-router-dom";
+
+// Tour stops — one per zoom level, navigating down a specific path
+const BASE = "/galaxy/0";
+const TOUR_STOPS = [
+  {
+    path: `${BASE}`,
+    title: "The Galaxy",
+    step: "1 of 12",
+    narration:
+      "Welcome to BitUniverse. You're looking at a single galaxy — one of 10\u00B9\u00B2 in the Bitcoin keyspace. This galaxy alone contains ~10\u2076\u2075 possible private keys. That's more than the atoms in a trillion Suns.",
+    tip: "Use arrow keys to look around, or click Next to dive deeper.",
+  },
+  {
+    path: `${BASE}/star/42`,
+    title: "A Star System",
+    step: "2 of 12",
+    narration:
+      "We've zoomed into one of a billion stars in this galaxy. Each star system holds ~10\u2076\u00B2 keys. Every computer on Earth working together couldn't search this star system in 10\u00B3\u2070 universe lifetimes.",
+    tip: "Each colored dot is a planet — a subdivision of the star's keyspace.",
+  },
+  {
+    path: `${BASE}/star/42/planet/3`,
+    title: "A Planet",
+    step: "3 of 12",
+    narration:
+      "This planet holds ~10\u2076\u00B9 keys — more than all the atoms in 10 billion human bodies. You'd need to search roughly 10 billion planets to find one containing a single used Bitcoin address.",
+    tip: "The planet's surface is divided into 49 regions you can explore.",
+  },
+  {
+    path: `${BASE}/star/42/planet/3/region/24`,
+    title: "A Region",
+    step: "4 of 12",
+    narration:
+      "We've landed on the planet's surface and entered a region. Each region contains ~10\u2075\u2074 keys — more than the atoms in all of Earth's oceans. All Bitcoin transactions ever made occupy less keyspace than a single electron in the observable universe.",
+    tip: "The grid shows sectors within this region. Each one goes deeper.",
+  },
+  {
+    path: `${BASE}/star/42/planet/3/region/24/sector/10`,
+    title: "A Sector",
+    step: "5 of 12",
+    narration:
+      "Each sector holds ~10\u2074\u2077 keys — more than all the water molecules in Earth's oceans. Your odds of finding a used key here are worse than winning the lottery five times in a row.",
+    tip: "We're five levels deep and the emptiness is still incomprehensible.",
+  },
+  {
+    path: `${BASE}/star/42/planet/3/region/24/sector/10/area/5`,
+    title: "An Area",
+    step: "6 of 12",
+    narration:
+      "This area contains ~10\u2074\u2070 keys — more than every bacterium on the entire planet. The odds of a used key being here: 1 in 10\u00B3\u00B2, a 1 followed by 32 zeros.",
+    tip: "That's harder than shuffling a deck of cards into the same order — twice.",
+  },
+  {
+    path: `${BASE}/star/42/planet/3/region/24/sector/10/area/5/ground/12`,
+    title: "Ground Level",
+    step: "7 of 12",
+    narration:
+      "We're at ground level with ~10\u00B3\u00B3 keys — as many as molecules in an Olympic swimming pool. A supercomputer checking a trillion keys per second would need 700 times the age of the universe to search just this patch of ground.",
+    tip: "Bitcoin's security relies on this absurd emptiness at every scale.",
+  },
+  {
+    path: `${BASE}/star/42/planet/3/region/24/sector/10/area/5/ground/12/grain/100`,
+    title: "A Grain of Sand",
+    step: "8 of 12",
+    narration:
+      "Each grain holds ~10\u00B2\u2076 keys — roughly as many as stars in the observable universe, times a hundred. You could search one grain per second for a billion years and never find a used key.",
+    tip: "The cosmic metaphor comes full circle — keys outnumber stars.",
+  },
+  {
+    path: `${BASE}/star/42/planet/3/region/24/sector/10/area/5/ground/12/grain/100/molecule/42`,
+    title: "A Molecule",
+    step: "9 of 12",
+    narration:
+      "A molecule contains ~10\u00B9\u2079 keys — about as many as grains of sand on all of Earth. Finding a used key here is like picking one specific grain of sand from the entire planet.",
+    tip: "The famous sand analogy — and we're still not at the bottom.",
+  },
+  {
+    path: `${BASE}/star/42/planet/3/region/24/sector/10/area/5/ground/12/grain/100/molecule/42/atom/250`,
+    title: "An Atom",
+    step: "10 of 12",
+    narration:
+      "About a trillion keys here — roughly the number of trees on Earth. Even this deep, the odds of finding a used key remain 1 in 10\u2076\u2078. Effectively zero.",
+    tip: "Eight levels below the planet and the keyspace is still astronomically empty.",
+  },
+  {
+    path: `${BASE}/star/42/planet/3/region/24/sector/10/area/5/ground/12/grain/100/molecule/42/atom/250/quark/99`,
+    title: "A Quark",
+    step: "11 of 12",
+    narration:
+      "Just 100,000 keys — a number you can almost comprehend. But the chance that any of these keys is a used Bitcoin address is still ~1 in 10\u2076\u00B3. Every key here has almost certainly never been generated by anyone, ever.",
+    tip: "We can finally see individual keys. One more level to go.",
+  },
+  {
+    path: `${BASE}/star/42/planet/3/region/24/sector/10/area/5/ground/12/grain/100/molecule/42/atom/250/quark/99/string/42`,
+    title: "A Single Key",
+    step: "12 of 12",
+    narration:
+      "You've reached the bottom — a unique 256-bit number, one point in the entire keyspace of 2\u00B2\u2075\u2076. The probability of this specific key being a used Bitcoin address is 1 in 10\u2076\u2078. The universe would end before you'd stumble upon it by chance.",
+    tip: "This is why Bitcoin is secure. The keyspace is simply too vast to search.",
+  },
+];
+
+export default function GuidedTour({ active, onExit }) {
+  const [stopIndex, setStopIndex] = useState(0);
+  const navigate = useNavigate();
+
+  const stop = TOUR_STOPS[stopIndex];
+  const isFirst = stopIndex === 0;
+  const isLast = stopIndex === TOUR_STOPS.length - 1;
+
+  // Navigate to current stop's path
+  useEffect(() => {
+    if (active && stop) {
+      navigate(stop.path);
+    }
+  }, [active, stopIndex, stop, navigate]);
+
+  const goNext = useCallback(() => {
+    if (!isLast) setStopIndex((i) => i + 1);
+  }, [isLast]);
+
+  const goBack = useCallback(() => {
+    if (!isFirst) setStopIndex((i) => i - 1);
+  }, [isFirst]);
+
+  const handleExit = useCallback(() => {
+    setStopIndex(0);
+    onExit();
+  }, [onExit]);
+
+  // Keyboard controls for tour (N = next, P = previous, T/Esc = exit)
+  useEffect(() => {
+    if (!active) return;
+    const handler = (e) => {
+      const key = e.key.toLowerCase();
+      if (key === "n" || key === "arrowright") {
+        e.preventDefault();
+        e.stopPropagation();
+        goNext();
+      } else if (key === "p" || key === "arrowleft") {
+        e.preventDefault();
+        e.stopPropagation();
+        goBack();
+      } else if (key === "t" || key === "escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        handleExit();
+      }
+    };
+    // Capture phase to intercept before Scene's keyboard handlers
+    window.addEventListener("keydown", handler, true);
+    return () => window.removeEventListener("keydown", handler, true);
+  }, [active, goNext, goBack, handleExit]);
+
+  if (!active || !stop) return null;
+
+  // Progress as percentage
+  const progress = ((stopIndex + 1) / TOUR_STOPS.length) * 100;
+
+  return (
+    <Box
+      sx={{
+        position: "absolute",
+        bottom: 48,
+        left: "50%",
+        transform: "translateX(-50%)",
+        width: "min(520px, calc(100vw - 32px))",
+        pointerEvents: "auto",
+        zIndex: 100,
+      }}
+    >
+      <Box
+        sx={{
+          background: "rgba(10, 6, 30, 0.85)",
+          backdropFilter: "blur(16px)",
+          border: "1px solid rgba(77, 244, 255, 0.2)",
+          borderRadius: "6px",
+          padding: "14px 18px",
+          boxShadow: "0 0 24px rgba(77, 244, 255, 0.08), 0 4px 32px rgba(0,0,0,0.6)",
+        }}
+      >
+        {/* Header row */}
+        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 0.75 }}>
+          <Typography
+            sx={{
+              color: "var(--theme-secondary)",
+              fontSize: "0.85rem",
+              fontWeight: 600,
+              lineHeight: 1.2,
+            }}
+          >
+            {stop.title}
+          </Typography>
+          <Typography
+            sx={{
+              color: "var(--theme-accent)",
+              fontSize: "0.5rem",
+              opacity: 0.6,
+              letterSpacing: "0.1em",
+            }}
+          >
+            {stop.step}
+          </Typography>
+        </Box>
+
+        {/* Progress bar */}
+        <Box sx={{ width: "100%", height: 2, background: "rgba(77, 244, 255, 0.1)", borderRadius: 1, mb: 1.25 }}>
+          <Box
+            sx={{
+              width: `${progress}%`,
+              height: "100%",
+              background: "var(--theme-secondary)",
+              borderRadius: 1,
+              transition: "width 0.4s ease",
+              boxShadow: "0 0 6px var(--theme-glow-secondary)",
+            }}
+          />
+        </Box>
+
+        {/* Narration */}
+        <Typography
+          sx={{
+            color: "var(--theme-text)",
+            fontSize: "0.65rem",
+            lineHeight: 1.7,
+            mb: 1,
+          }}
+        >
+          {stop.narration}
+        </Typography>
+
+        {/* Tip */}
+        <Typography
+          sx={{
+            color: "var(--theme-accent)",
+            fontSize: "0.5rem",
+            opacity: 0.5,
+            fontStyle: "italic",
+            mb: 1.5,
+          }}
+        >
+          {stop.tip}
+        </Typography>
+
+        {/* Controls */}
+        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <TourButton onClick={handleExit} label="Exit Tour" secondary />
+          <Box sx={{ display: "flex", gap: 1 }}>
+            {!isFirst && <TourButton onClick={goBack} label="\u2190 Back" secondary />}
+            {!isLast && <TourButton onClick={goNext} label="Next \u2192" />}
+            {isLast && <TourButton onClick={handleExit} label="Finish" />}
+          </Box>
+        </Box>
+
+        {/* Keyboard hint */}
+        <Typography
+          sx={{
+            color: "var(--theme-accent)",
+            fontSize: "0.45rem",
+            opacity: 0.35,
+            textAlign: "center",
+            mt: 1,
+          }}
+        >
+          Arrow keys or N/P to navigate \u00B7 T or Esc to exit
+        </Typography>
+      </Box>
+    </Box>
+  );
+}
+
+function TourButton({ onClick, label, secondary }) {
+  return (
+    <Box
+      onClick={onClick}
+      sx={{
+        cursor: "pointer",
+        padding: "6px 14px",
+        minHeight: 40,
+        display: "flex",
+        alignItems: "center",
+        borderRadius: "3px",
+        border: secondary
+          ? "1px solid rgba(77, 244, 255, 0.15)"
+          : "1px solid rgba(77, 244, 255, 0.4)",
+        background: secondary
+          ? "rgba(77, 244, 255, 0.03)"
+          : "rgba(77, 244, 255, 0.1)",
+        userSelect: "none",
+        transition: "all 0.15s ease",
+        "&:hover": {
+          background: secondary
+            ? "rgba(77, 244, 255, 0.08)"
+            : "rgba(77, 244, 255, 0.2)",
+          borderColor: "rgba(77, 244, 255, 0.5)",
+        },
+      }}
+    >
+      <Typography
+        sx={{
+          color: secondary ? "var(--theme-accent)" : "var(--theme-secondary)",
+          fontSize: "0.6rem",
+          fontWeight: secondary ? 400 : 600,
+          letterSpacing: "0.05em",
+          opacity: secondary ? 0.6 : 1,
+        }}
+      >
+        {label}
+      </Typography>
+    </Box>
+  );
+}

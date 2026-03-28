@@ -59,6 +59,7 @@ export default function ControlsOverlay({ isVisible }) {
         <ControlRow keys="J" action="Random Jump" />
         <ControlRow keys="M" action="Center Galaxy" />
         <ControlRow keys="O" action="Reset Camera" />
+        <ControlRow keys="T" action="Guided Tour" />
         <ControlRow keys="C" action="Toggle Controls" />
         <ControlRow keys="I" action="Toggle HUD" />
       </Box>

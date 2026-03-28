@@ -64,3 +64,21 @@ Educational overlays at every zoom level showing physical analogies, probability
 
 #### Files Modified
 - `client/src/Scene.js` - Imported and rendered ScaleContextWidget in right HUD column
+
+### Guided Tour - DONE
+Optional tour mode that walks users through all 12 zoom levels with narrated stops. Addresses GOALS.md v2.0 "guided exploration" milestone.
+
+- 12-stop tour from Galaxy down to a single 256-bit key, with educational narration at each level
+- Auto-navigates between stops via Next/Back buttons
+- Accessible via [T] button in bottom bar or T keyboard shortcut
+- Arrow keys / N/P navigate within the tour; T/Esc exits
+- Tour intercepts keyboard in capture phase so it doesn't conflict with Scene navigation
+- Progress bar shows tour completion percentage
+
+#### Files Created
+- `client/src/components/GuidedTour.js` - Tour overlay with 12 narrated stops
+
+#### Files Modified
+- `client/src/Scene.js` - Imported GuidedTour, added tour state, wired [T] Tour button in bottom bar
+- `client/src/utils/keyboardManager.js` - Added TOGGLE_TOUR action and T shortcut
+- `client/src/components/ControlsOverlay.js` - Added T shortcut to controls reference

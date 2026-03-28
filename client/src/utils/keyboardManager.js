@@ -9,6 +9,7 @@ export const KEYBOARD_ACTIONS = {
   RESET_CAMERA: "RESET_CAMERA",
   ZOOM_IN: "ZOOM_IN",
   ZOOM_OUT: "ZOOM_OUT",
+  TOGGLE_TOUR: "TOGGLE_TOUR",
 };
 
 // Keyboard shortcut configuration
@@ -22,6 +23,7 @@ export const KEYBOARD_SHORTCUTS = {
   [KEYBOARD_ACTIONS.RESET_CAMERA]: ["o"],
   [KEYBOARD_ACTIONS.ZOOM_IN]: ["enter", " "],
   [KEYBOARD_ACTIONS.ZOOM_OUT]: ["escape", "backspace"],
+  [KEYBOARD_ACTIONS.TOGGLE_TOUR]: ["t"],
 };
 
 // Action handlers type
