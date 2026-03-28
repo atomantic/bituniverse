@@ -37,6 +37,7 @@ import ScaleContextWidget from "./components/ScaleContextWidget";
 import GuidedTour from "./components/GuidedTour";
 import KeyLookup from "./components/KeyLookup";
 import ShareOverlay from "./components/ShareOverlay";
+import NavigationHistory from "./components/NavigationHistory";
 import ControlsOverlay from "./components/ControlsOverlay";
 import BreadcrumbNav from "./components/BreadcrumbNav";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
@@ -94,6 +95,7 @@ function SceneContent({
   setIsTourActive,
   setIsKeyLookupActive,
   setIsShareActive,
+  setIsHistoryActive,
   onGalaxySelect,
   onStarHover,
   onPlanetHover,
@@ -166,6 +168,7 @@ function SceneContent({
       [KEYBOARD_ACTIONS.TOGGLE_TOUR]: () => setIsTourActive((prev) => !prev),
       [KEYBOARD_ACTIONS.TOGGLE_KEY_LOOKUP]: () => setIsKeyLookupActive((prev) => !prev),
       [KEYBOARD_ACTIONS.SHARE_LOCATION]: () => setIsShareActive((prev) => !prev),
+      [KEYBOARD_ACTIONS.TOGGLE_HISTORY]: () => setIsHistoryActive((prev) => !prev),
       [KEYBOARD_ACTIONS.NAVIGATE_LEFT]: () => {
         if (deepIdx > 0) {
           const paramName = PARAM_NAMES[deepIdx];
@@ -282,7 +285,7 @@ function SceneContent({
     const handleKeyPress = createKeyboardListener(handlers);
     window.addEventListener("keydown", handleKeyPress);
     return () => window.removeEventListener("keydown", handleKeyPress);
-  }, [baseKeyOffset, onKeyOffsetChange, navigate, camera, setIsControlsVisible, setIsInfoVisible, setIsTourActive, setIsKeyLookupActive, setIsShareActive, onGalaxySelect, view, params, hoveredChild, galaxyId, starId, planetId]);
+  }, [baseKeyOffset, onKeyOffsetChange, navigate, camera, setIsControlsVisible, setIsInfoVisible, setIsTourActive, setIsKeyLookupActive, setIsShareActive, setIsHistoryActive, onGalaxySelect, view, params, hoveredChild, galaxyId, starId, planetId]);
 
   return (
     <>
@@ -379,6 +382,48 @@ function Scene({ baseKeyOffset, onKeyOffsetChange, view = "galaxy" }) {
   const [isTourActive, setIsTourActive] = useState(false);
   const [isKeyLookupActive, setIsKeyLookupActive] = useState(false);
   const [isShareActive, setIsShareActive] = useState(false);
+  const [isHistoryActive, setIsHistoryActive] = useState(false);
+  const [navHistory, setNavHistory] = useState([]);
+  const location = useLocation();
+  const historyIdRef = useRef(0);
+
+  // Track navigation history
+  useEffect(() => {
+    const path = location.pathname;
+
+    // Build a human-readable label from the current view and params
+    const labelParts = [];
+    if (galaxyId !== undefined) labelParts.push(generateGalaxyName(parseInt(galaxyId, 10)));
+    if (starId !== undefined && view !== "galaxy") labelParts.push(`Star ${starId}`);
+    if (planetId !== undefined && !["galaxy", "solarSystem"].includes(view)) {
+      labelParts.push(generatePlanetName(`${galaxyId}${starId}${planetId}`));
+    }
+    const deepLabels = [
+      { param: regionId, label: "Region" },
+      { param: sectorId, label: "Sector" },
+      { param: areaId, label: "Area" },
+      { param: groundId, label: "Ground" },
+      { param: grainId, label: "Grain" },
+      { param: moleculeId, label: "Molecule" },
+      { param: atomId, label: "Atom" },
+      { param: quarkId, label: "Quark" },
+      { param: stringId, label: "String" },
+    ];
+    for (const { param, label } of deepLabels) {
+      if (param !== undefined) labelParts.push(`${label} ${param}`);
+    }
+    const label = labelParts.join(" > ") || "Home";
+
+    setNavHistory((prev) => {
+      // Skip duplicate consecutive entries (same path)
+      if (prev.length > 0 && prev[prev.length - 1].path === path) return prev;
+      historyIdRef.current += 1;
+      const entry = { id: historyIdRef.current, path, view, label, timestamp: Date.now() };
+      // Cap at 100 entries
+      const next = [...prev, entry];
+      return next.length > 100 ? next.slice(-100) : next;
+    });
+  }, [location.pathname, view, galaxyId, starId, planetId, regionId, sectorId, areaId, groundId, grainId, moleculeId, atomId, quarkId, stringId]);
 
   const handleDeepHover = useCallback((idx) => {
     setHoveredChild(idx);
@@ -477,6 +522,7 @@ function Scene({ baseKeyOffset, onKeyOffsetChange, view = "galaxy" }) {
           setIsTourActive={setIsTourActive}
           setIsKeyLookupActive={setIsKeyLookupActive}
           setIsShareActive={setIsShareActive}
+          setIsHistoryActive={setIsHistoryActive}
           onGalaxySelect={setSelectedBody}
           onStarHover={handleStarSelect}
           onPlanetHover={handlePlanetSelect}
@@ -566,6 +612,12 @@ function Scene({ baseKeyOffset, onKeyOffsetChange, view = "galaxy" }) {
               [S] Share
             </Typography>
             <Typography
+              onClick={() => setIsHistoryActive((v) => !v)}
+              sx={{ color: isHistoryActive ? "var(--theme-secondary)" : "var(--theme-accent)", fontSize: "0.5rem", opacity: isHistoryActive ? 0.8 : 0.4, cursor: "pointer", userSelect: "none", "&:hover": { opacity: 0.8 } }}
+            >
+              [H] History
+            </Typography>
+            <Typography
               onClick={() => setIsControlsVisible((v) => !v)}
               sx={{ color: "var(--theme-accent)", fontSize: "0.5rem", opacity: 0.4, cursor: "pointer", userSelect: "none", "&:hover": { opacity: 0.8 } }}
             >
@@ -579,6 +631,7 @@ function Scene({ baseKeyOffset, onKeyOffsetChange, view = "galaxy" }) {
       <GuidedTour active={isTourActive} onExit={() => setIsTourActive(false)} />
       <KeyLookup active={isKeyLookupActive} onClose={() => setIsKeyLookupActive(false)} />
       <ShareOverlay active={isShareActive} onClose={() => setIsShareActive(false)} view={view} />
+      <NavigationHistory active={isHistoryActive} onClose={() => setIsHistoryActive(false)} history={navHistory} currentPath={location.pathname} />
     </Box>
   );
 }

@@ -101,3 +101,23 @@ Search overlay that lets users paste a 256-bit hex key and navigate directly to 
 - `client/src/Scene.js` - Imported KeyLookup, added lookup state, wired [F] Find Key button in bottom bar
 - `client/src/utils/keyboardManager.js` - Added TOGGLE_KEY_LOOKUP action and F shortcut
 - `client/src/components/ControlsOverlay.js` - Added F shortcut to controls reference
+
+### Navigation History - DONE
+Session-scoped exploration history that tracks every location visited and allows instant revisiting. Supports the "useful for educators, conference talks" v2.0 goal by letting presenters retrace their exploration path.
+
+- Automatically records every navigation with view level, human-readable label, and timestamp
+- Reverse-chronological display with newest entries at top
+- Current location highlighted with accent border
+- Click any entry to instantly navigate back to that location
+- Visual depth indentation mirrors the zoom hierarchy
+- Capped at 100 entries per session; deduplicates consecutive same-path visits
+- Accessible via [H] button in bottom bar or H keyboard shortcut
+- Escape closes; click outside to dismiss
+
+#### Files Created
+- `client/src/components/NavigationHistory.js` - History overlay with scrollable list, time-ago display, depth-indented entries
+
+#### Files Modified
+- `client/src/Scene.js` - Imported NavigationHistory, added history state/tracking effect, wired [H] History button in bottom bar
+- `client/src/utils/keyboardManager.js` - Added TOGGLE_HISTORY action and H shortcut
+- `client/src/components/ControlsOverlay.js` - Added H shortcut to controls reference

@@ -62,6 +62,7 @@ export default function ControlsOverlay({ isVisible }) {
         <ControlRow keys="T" action="Guided Tour" />
         <ControlRow keys="F" action="Key Lookup" />
         <ControlRow keys="S" action="Share Location" />
+        <ControlRow keys="H" action="Navigation History" />
         <ControlRow keys="C" action="Toggle Controls" />
         <ControlRow keys="I" action="Toggle HUD" />
       </Box>
