@@ -140,3 +140,22 @@ Interactive overlay that lets users experiment with computing power scenarios to
 - `client/src/Scene.js` - Imported BruteForceCalculator, added state, wired [B] Brute Force button in bottom bar
 - `client/src/utils/keyboardManager.js` - Added TOGGLE_BRUTE_FORCE action and B shortcut
 - `client/src/components/ControlsOverlay.js` - Added B shortcut to controls reference
+
+### Auto-Explore / Ambient Mode - DONE
+Auto-pilot that navigates through random paths in the keyspace hierarchy, pausing at each zoom level. Ideal for classrooms, conference talks, and kiosk displays. Supports the GOALS.md long-term vision of BitUniverse being "shown in classrooms" and useful for "conference talks."
+
+- Automatically cycles through all 12 zoom levels: Galaxy → Star → Planet → Globe → Continent → Region → Area → Ground → Grain → Molecule → Atom → Quark
+- Picks random locations at each level, building a unique path each cycle
+- Pauses 3-5 seconds per level so educational context (ScaleContextWidget) is visible
+- Shows a floating indicator with pulsing dot, current level label, and cycle count
+- Progress bar shows journey completion through the hierarchy
+- Accessible via [A] button in bottom bar or A keyboard shortcut
+- Escape or A stops; clicking the indicator stops
+
+#### Files Created
+- `client/src/components/AutoExplore.js` - Auto-explore overlay with timer-driven navigation, random path generation, progress indicator
+
+#### Files Modified
+- `client/src/Scene.js` - Imported AutoExplore, added state, wired [A] Auto-Explore button in bottom bar
+- `client/src/utils/keyboardManager.js` - Added TOGGLE_AUTO_EXPLORE action and A shortcut
+- `client/src/components/ControlsOverlay.js` - Added A shortcut to controls reference
