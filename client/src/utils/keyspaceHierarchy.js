@@ -78,3 +78,50 @@ export function formatKeysCount(keysPerUnit) {
   const str = keysPerUnit.toString();
   return `~10^${str.length - 1}`;
 }
+
+// Reverse-map a 256-bit hex key to its full hierarchy location
+export function keyToLocation(hexKey) {
+  const cleaned = hexKey.replace(/^0x/i, "").replace(/\s/g, "");
+  if (!/^[0-9a-fA-F]{1,64}$/.test(cleaned)) return null;
+  let remaining = BigInt("0x" + cleaned.padStart(64, "0"));
+
+  const galaxyId = remaining / KEYS_PER_GALAXY;
+  remaining = remaining % KEYS_PER_GALAXY;
+  const starId = remaining / KEYS_PER_STAR;
+  remaining = remaining % KEYS_PER_STAR;
+  const planetId = remaining / KEYS_PER_PLANET;
+  remaining = remaining % KEYS_PER_PLANET;
+  const regionId = remaining / KEYS_PER_REGION;
+  remaining = remaining % KEYS_PER_REGION;
+  const sectorId = remaining / KEYS_PER_SECTOR;
+  remaining = remaining % KEYS_PER_SECTOR;
+  const areaId = remaining / KEYS_PER_AREA;
+  remaining = remaining % KEYS_PER_AREA;
+  const groundId = remaining / KEYS_PER_GROUND;
+  remaining = remaining % KEYS_PER_GROUND;
+  const grainId = remaining / KEYS_PER_GRAIN;
+  remaining = remaining % KEYS_PER_GRAIN;
+  const moleculeId = remaining / KEYS_PER_MOLECULE;
+  remaining = remaining % KEYS_PER_MOLECULE;
+  const atomId = remaining / KEYS_PER_ATOM;
+  remaining = remaining % KEYS_PER_ATOM;
+  const quarkId = remaining / KEYS_PER_QUARK;
+  remaining = remaining % KEYS_PER_QUARK;
+  const stringId = remaining / KEYS_PER_STRING;
+
+  return {
+    galaxyId: Number(galaxyId),
+    starId: Number(starId),
+    planetId: Number(planetId),
+    regionId: Number(regionId),
+    sectorId: Number(sectorId),
+    areaId: Number(areaId),
+    groundId: Number(groundId),
+    grainId: Number(grainId),
+    moleculeId: Number(moleculeId),
+    atomId: Number(atomId),
+    quarkId: Number(quarkId),
+    stringId: Number(stringId),
+    path: `/galaxy/${galaxyId}/star/${starId}/planet/${planetId}/region/${regionId}/sector/${sectorId}/area/${areaId}/ground/${groundId}/grain/${grainId}/molecule/${moleculeId}/atom/${atomId}/quark/${quarkId}/string/${stringId}`,
+  };
+}

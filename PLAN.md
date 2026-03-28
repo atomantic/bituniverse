@@ -82,3 +82,22 @@ Optional tour mode that walks users through all 12 zoom levels with narrated sto
 - `client/src/Scene.js` - Imported GuidedTour, added tour state, wired [T] Tour button in bottom bar
 - `client/src/utils/keyboardManager.js` - Added TOGGLE_TOUR action and T shortcut
 - `client/src/components/ControlsOverlay.js` - Added T shortcut to controls reference
+
+### Key Lookup - DONE
+Search overlay that lets users paste a 256-bit hex key and navigate directly to its exact location in the universe. Addresses GOALS.md Core Tenet #2 "Deep Explorability" and makes keyspace positions personally tangible.
+
+- Accepts any hex string up to 64 characters, reverse-maps it to galaxy/star/planet/...string indices
+- Shows the complete location breakdown with named galaxies and planets
+- Depth selector lets users choose which zoom level to navigate to (galaxy through string)
+- "Random Key" button generates a random 256-bit key for exploration
+- Accessible via [F] button in bottom bar or F keyboard shortcut
+- Enter submits, Escape closes; click outside to dismiss
+
+#### Files Created
+- `client/src/components/KeyLookup.js` - Key lookup overlay with hex input, location preview, depth selector
+
+#### Files Modified
+- `client/src/utils/keyspaceHierarchy.js` - Added `keyToLocation()` reverse-mapping function
+- `client/src/Scene.js` - Imported KeyLookup, added lookup state, wired [F] Find Key button in bottom bar
+- `client/src/utils/keyboardManager.js` - Added TOGGLE_KEY_LOOKUP action and F shortcut
+- `client/src/components/ControlsOverlay.js` - Added F shortcut to controls reference

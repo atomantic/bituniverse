@@ -10,6 +10,7 @@ export const KEYBOARD_ACTIONS = {
   ZOOM_IN: "ZOOM_IN",
   ZOOM_OUT: "ZOOM_OUT",
   TOGGLE_TOUR: "TOGGLE_TOUR",
+  TOGGLE_KEY_LOOKUP: "TOGGLE_KEY_LOOKUP",
 };
 
 // Keyboard shortcut configuration
@@ -24,6 +25,7 @@ export const KEYBOARD_SHORTCUTS = {
   [KEYBOARD_ACTIONS.ZOOM_IN]: ["enter", " "],
   [KEYBOARD_ACTIONS.ZOOM_OUT]: ["escape", "backspace"],
   [KEYBOARD_ACTIONS.TOGGLE_TOUR]: ["t"],
+  [KEYBOARD_ACTIONS.TOGGLE_KEY_LOOKUP]: ["f"],
 };
 
 // Action handlers type
