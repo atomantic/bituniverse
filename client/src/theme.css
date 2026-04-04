@@ -263,6 +263,11 @@ body {
 }
 
 /* Animations */
+@keyframes depthGaugePulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 6px rgba(77, 244, 255, 0.5); }
+  50% { opacity: 0.6; box-shadow: 0 0 12px rgba(77, 244, 255, 0.5); }
+}
+
 @keyframes crystalShine {
   0% {
     transform: rotate(45deg) translateY(-100%);

@@ -180,3 +180,21 @@ Persistent saved locations using localStorage that let users bookmark interestin
 - `client/src/Scene.js` - Imported Bookmarks, added state, extracted currentLabel memo, wired [K] Bookmarks button in bottom bar
 - `client/src/utils/keyboardManager.js` - Added TOGGLE_BOOKMARKS action and K shortcut
 - `client/src/components/ControlsOverlay.js` - Added K shortcut to controls reference
+
+### Zoom Depth Gauge - DONE
+Persistent vertical gauge showing all 12 zoom levels as a slim strip, with the current level highlighted and pulsing. Click any visited level to navigate back up the hierarchy. Makes the scale depth immediately tangible at a glance. Supports the GOALS.md v1.0 "Self-explanatory UX" milestone and long-term vision of being "shown in classrooms."
+
+- [x] 12 zoom levels displayed as connected dots with 3-letter labels (GAL, STR, PLN, GLB, CNT, RGN, ARE, GND, GRN, MOL, ATM, QRK)
+- Current level highlighted with cyan glow and pulsing animation
+- Visited (parent) levels are clickable to navigate up the hierarchy
+- Unvisited (deeper) levels shown as dim indicators
+- Hover reveals full level name via tooltip; visited dots brighten on hover
+- Positioned between left info panel and center, vertically centered
+- Connecting lines between levels show visited/unvisited state
+
+#### Files Created
+- `client/src/components/ZoomDepthGauge.js` - Vertical depth gauge with clickable navigation, pulse animation, hover effects
+
+#### Files Modified
+- `client/src/Scene.js` - Imported ZoomDepthGauge, rendered in HUD middle section
+- `client/src/theme.css` - Added depthGaugePulse keyframe animation
