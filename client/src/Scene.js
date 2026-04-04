@@ -42,6 +42,7 @@ import BruteForceCalculator from "./components/BruteForceCalculator";
 import AutoExplore from "./components/AutoExplore";
 import Bookmarks from "./components/Bookmarks";
 import ControlsOverlay from "./components/ControlsOverlay";
+import ZoomDepthGauge from "./components/ZoomDepthGauge";
 import BreadcrumbNav from "./components/BreadcrumbNav";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { getGalaxyPosition, getGalaxyProperties } from "./utils/helpers";
@@ -581,6 +582,7 @@ function Scene({ baseKeyOffset, onKeyOffsetChange, view = "galaxy" }) {
               {view === "quark" && <QuarkWidget stringId={stringId} hexKey={hoveredHexKey} />}
             </Box>
           )}
+          <ZoomDepthGauge view={view} />
           <Box sx={{ flex: 1 }} />
           {isInfoVisible && (
             <Box sx={{ width: 220, display: "flex", flexDirection: "column", gap: 0.75, p: 0.75, pointerEvents: "auto" }}>
