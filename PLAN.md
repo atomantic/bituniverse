@@ -198,3 +198,23 @@ Persistent vertical gauge showing all 12 zoom levels as a slim strip, with the c
 #### Files Modified
 - `client/src/Scene.js` - Imported ZoomDepthGauge, rendered in HUD middle section
 - `client/src/theme.css` - Added depthGaugePulse keyframe animation
+
+### Scale Comparison - DONE
+Visual log-scaled comparison of physical and conceptual quantities — humans on Earth, grains of sand, atoms in the Sun, atoms in the observable universe — against the SHA-256 keyspace and the count of every Bitcoin address ever used. Directly addresses GOALS.md v2.0 "Probability context" milestone (visual cues for sparsity) and the Long-Term Vision goal of replacing the "imagine every grain of sand on Earth" paragraph with a lived experience.
+
+- 14 reference quantities ranging from ~10⁴ (people you'll meet in a lifetime) to ~10¹²⁰ (Shannon's number for chess games)
+- Each row has a logarithmic horizontal bar — every 10 ticks is a 10-billion-fold jump, so bars stay readable across 120 orders of magnitude
+- 2²⁵⁶ keyspace bar highlighted in cyan; used Bitcoin addresses bar highlighted in Bitcoin-orange — the chasm between them is the educational point
+- Current zoom level rendered as its own gold "Your current view" row, plus a gold tick on any reference row within ~0.4 orders of magnitude (visceral "you are here in the keyspace, even at quark scale" moment)
+- Bottom log-scale axis with 10⁰…10¹²⁰ ticks for orientation
+- Footer note about Landauer-bound thermodynamics ("even every atom checking a billion keys/sec since the Big Bang")
+- Accessible via [X] button in bottom bar or X keyboard shortcut
+- Escape closes; click outside to dismiss
+
+#### Files Created
+- `client/src/components/ScaleComparison.js` - Log-scale comparison overlay with 14 reference quantities, dynamic current-view marker, and axis ticks
+
+#### Files Modified
+- `client/src/Scene.js` - Imported ScaleComparison, added state, wired [X] Compare button in bottom bar, passed view prop for current-level marker
+- `client/src/utils/keyboardManager.js` - Added TOGGLE_SCALE_COMPARISON action and X shortcut
+- `client/src/components/ControlsOverlay.js` - Added X shortcut to controls reference
