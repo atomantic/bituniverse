@@ -2,6 +2,10 @@
 
 Completed items archived from PLAN.md. For project mission and milestones, see [GOALS.md](./GOALS.md). For current work, see [PLAN.md](./PLAN.md).
 
+## 2026-06 — Scale Comparison
+
+- Scale Comparison — log-scaled overlay comparing 14 physical/conceptual quantities (humans on Earth, grains of sand, atoms in the Sun and observable universe, Shannon's number) against the 2²⁵⁶ keyspace and every Bitcoin address ever used, with a gold "you are here" current-view marker, [X] toggle — `client/src/components/ScaleComparison.js`
+
 ## 2026-04 — Zoom Depth Gauge
 
 - Persistent vertical 12-level depth gauge (GAL → QRK) with current-level pulse, clickable parent navigation, and hover tooltips — `client/src/components/ZoomDepthGauge.js`

@@ -41,6 +41,7 @@ import NavigationHistory from "./components/NavigationHistory";
 import BruteForceCalculator from "./components/BruteForceCalculator";
 import AutoExplore from "./components/AutoExplore";
 import Bookmarks from "./components/Bookmarks";
+import ScaleComparison from "./components/ScaleComparison";
 import ControlsOverlay from "./components/ControlsOverlay";
 import ZoomDepthGauge from "./components/ZoomDepthGauge";
 import BreadcrumbNav from "./components/BreadcrumbNav";
@@ -103,6 +104,7 @@ function SceneContent({
   setIsBruteForceActive,
   setIsAutoExploreActive,
   setIsBookmarksActive,
+  setIsScaleComparisonActive,
   onGalaxySelect,
   onStarHover,
   onPlanetHover,
@@ -179,6 +181,7 @@ function SceneContent({
       [KEYBOARD_ACTIONS.TOGGLE_BRUTE_FORCE]: () => setIsBruteForceActive((prev) => !prev),
       [KEYBOARD_ACTIONS.TOGGLE_AUTO_EXPLORE]: () => setIsAutoExploreActive((prev) => !prev),
       [KEYBOARD_ACTIONS.TOGGLE_BOOKMARKS]: () => setIsBookmarksActive((prev) => !prev),
+      [KEYBOARD_ACTIONS.TOGGLE_SCALE_COMPARISON]: () => setIsScaleComparisonActive((prev) => !prev),
       [KEYBOARD_ACTIONS.NAVIGATE_LEFT]: () => {
         if (deepIdx > 0) {
           const paramName = PARAM_NAMES[deepIdx];
@@ -295,7 +298,7 @@ function SceneContent({
     const handleKeyPress = createKeyboardListener(handlers);
     window.addEventListener("keydown", handleKeyPress);
     return () => window.removeEventListener("keydown", handleKeyPress);
-  }, [baseKeyOffset, onKeyOffsetChange, navigate, camera, setIsControlsVisible, setIsInfoVisible, setIsTourActive, setIsKeyLookupActive, setIsShareActive, setIsHistoryActive, setIsBruteForceActive, setIsAutoExploreActive, setIsBookmarksActive, onGalaxySelect, view, params, hoveredChild, galaxyId, starId, planetId]);
+  }, [baseKeyOffset, onKeyOffsetChange, navigate, camera, setIsControlsVisible, setIsInfoVisible, setIsTourActive, setIsKeyLookupActive, setIsShareActive, setIsHistoryActive, setIsBruteForceActive, setIsAutoExploreActive, setIsBookmarksActive, setIsScaleComparisonActive, onGalaxySelect, view, params, hoveredChild, galaxyId, starId, planetId]);
 
   return (
     <>
@@ -396,6 +399,7 @@ function Scene({ baseKeyOffset, onKeyOffsetChange, view = "galaxy" }) {
   const [isBruteForceActive, setIsBruteForceActive] = useState(false);
   const [isAutoExploreActive, setIsAutoExploreActive] = useState(false);
   const [isBookmarksActive, setIsBookmarksActive] = useState(false);
+  const [isScaleComparisonActive, setIsScaleComparisonActive] = useState(false);
   const [navHistory, setNavHistory] = useState([]);
   const location = useLocation();
   const historyIdRef = useRef(0);
@@ -541,6 +545,7 @@ function Scene({ baseKeyOffset, onKeyOffsetChange, view = "galaxy" }) {
           setIsBruteForceActive={setIsBruteForceActive}
           setIsAutoExploreActive={setIsAutoExploreActive}
           setIsBookmarksActive={setIsBookmarksActive}
+          setIsScaleComparisonActive={setIsScaleComparisonActive}
           onGalaxySelect={setSelectedBody}
           onStarHover={handleStarSelect}
           onPlanetHover={handlePlanetSelect}
@@ -655,6 +660,12 @@ function Scene({ baseKeyOffset, onKeyOffsetChange, view = "galaxy" }) {
               [K] Bookmarks
             </Typography>
             <Typography
+              onClick={() => setIsScaleComparisonActive((v) => !v)}
+              sx={{ color: isScaleComparisonActive ? "var(--theme-secondary)" : "var(--theme-accent)", fontSize: "0.5rem", opacity: isScaleComparisonActive ? 0.8 : 0.4, cursor: "pointer", userSelect: "none", "&:hover": { opacity: 0.8 } }}
+            >
+              [X] Compare
+            </Typography>
+            <Typography
               onClick={() => setIsControlsVisible((v) => !v)}
               sx={{ color: "var(--theme-accent)", fontSize: "0.5rem", opacity: 0.4, cursor: "pointer", userSelect: "none", "&:hover": { opacity: 0.8 } }}
             >
@@ -672,6 +683,7 @@ function Scene({ baseKeyOffset, onKeyOffsetChange, view = "galaxy" }) {
       <BruteForceCalculator active={isBruteForceActive} onClose={() => setIsBruteForceActive(false)} />
       <AutoExplore active={isAutoExploreActive} onClose={() => setIsAutoExploreActive(false)} />
       <Bookmarks active={isBookmarksActive} onClose={() => setIsBookmarksActive(false)} currentPath={location.pathname} currentView={view} currentLabel={currentLabel} />
+      <ScaleComparison active={isScaleComparisonActive} onClose={() => setIsScaleComparisonActive(false)} view={view} />
     </Box>
   );
 }
