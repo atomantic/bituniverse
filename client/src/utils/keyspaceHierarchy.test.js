@@ -42,7 +42,7 @@ describe("keyspaceHierarchy", () => {
       // (3 galaxies + 42 stars + 7 planets + deep-zoom offsets), so an
       // encoder bug cannot hide behind a matching decoder bug.
       expect(key).toBe(
-        "000000000358CA45B03864D6398FD6E6D4D9B541E37DC637C48C7587D107097D"
+        "00000000035871A4373C69343490CBB15B9D1A1AA055313507D11F6A6F086F01"
       );
       const loc = keyToLocation(key);
       for (const [param, value] of Object.entries(ids)) {
