@@ -107,10 +107,12 @@ describe("keyspaceHierarchy", () => {
 
   describe("input cleaning", () => {
     it("strips a 0x prefix, surrounding whitespace, and pads short keys", () => {
-      const loc = keyToLocation("0xFF");
-      expect(loc.galaxyId).toBe(255);
-      expect(keyToLocation(" FF ").galaxyId).toBe(255);
-      expect(keyToLocation("ff").galaxyId).toBe(255);
+      // 255 keys sits inside galaxy 0; with KEYS_PER_STRING === 1 the raw
+      // value surfaces as stringId.
+      expect(keyToLocation("0xFF").stringId).toBe(255);
+      expect(keyToLocation(" FF ").stringId).toBe(255);
+      expect(keyToLocation("ff").stringId).toBe(255);
+      expect(keyToLocation("ff").galaxyId).toBe(0);
     });
   });
 
