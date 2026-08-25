@@ -320,7 +320,5 @@ export function generateGalaxyConfig(galaxyIndex) {
     GALAXY_THICKNESS: galaxyThickness,
   };
 
-  console.log("Generated nebula config:", nebulaConfig);
-
   return nebulaConfig;
 }

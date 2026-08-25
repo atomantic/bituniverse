@@ -4,6 +4,7 @@ import { useParams } from "react-router-dom";
 import { generatePlanetName, generatePlanetStats } from "../utils/planetStats";
 import { getRandomPlanetType } from "../config/planetTypes";
 import { KEYS_PER_GALAXY } from "../utils/constants";
+import { toBigIntSafe } from "../utils/keyspaceHierarchy";
 import HudWidget, { InfoRow, SectionLabel } from "./HudWidget";
 
 export function PlanetOverviewWidget({ selectedPlanet }) {
@@ -76,9 +77,9 @@ export function PlanetDetailWidget({ selectedPlanet }) {
 
   const keysPerPlanet = KEYS_PER_GALAXY / BigInt(1000) / BigInt(10);
   const keysExponent = keysPerPlanet.toString().length - 1;
-  const galaxyNum = BigInt(galaxyId ?? 0);
-  const starNum = BigInt(starId ?? 0);
-  const planetNum = BigInt(planetId ?? 0);
+  const galaxyNum = toBigIntSafe(galaxyId);
+  const starNum = toBigIntSafe(starId);
+  const planetNum = toBigIntSafe(planetId);
   const startKey =
     galaxyNum * KEYS_PER_GALAXY +
     starNum * (KEYS_PER_GALAXY / BigInt(1000)) +

@@ -1,6 +1,7 @@
 import React from "react";
 import { Box, Typography } from "@mui/material";
 import { STAR_TYPES, KEYS_PER_GALAXY, TOTAL_KEYS } from "../utils/constants";
+import { toBigIntSafe } from "../utils/keyspaceHierarchy";
 import { generateGalaxyName } from "../utils/galaxyNames";
 import HudWidget, { InfoRow, SectionLabel } from "./HudWidget";
 
@@ -51,7 +52,7 @@ export function GalaxyKeyspaceWidget({ selectedBody }) {
   if (!selectedBody || selectedBody.type !== "galaxy") return null;
 
   const galaxyIndex = parseInt(selectedBody.key, 10);
-  const startKey = BigInt(galaxyIndex) * KEYS_PER_GALAXY;
+  const startKey = toBigIntSafe(galaxyIndex) * KEYS_PER_GALAXY;
   const endKey = startKey + KEYS_PER_GALAXY;
   const startKeyHex = startKey.toString(16).padStart(64, "0").toUpperCase();
   const endKeyHex = endKey.toString(16).padStart(64, "0").toUpperCase();

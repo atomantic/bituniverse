@@ -29,10 +29,12 @@ export const KEYS_PER_QUARK = KEYS_PER_ATOM / QUARKS_PER_ATOM;
 export const KEYS_PER_STRING = KEYS_PER_QUARK / STRINGS_PER_QUARK;
 
 // Visible items at each deep zoom level
+// (must match what each view actually renders, so arrow-key wrap and
+// auto-explore never land on an id with no visual representation)
 export const VISIBLE_REGIONS = 49;       // 7x7 lat/lon zones on planet
-export const VISIBLE_SECTORS = 400;      // 20x20 grid
-export const VISIBLE_AREAS = 400;        // 20x20 grid
-export const VISIBLE_GROUNDS = 400;      // 20x20 grid
+export const VISIBLE_SECTORS = 308;      // 22x14 hex grid on globe
+export const VISIBLE_AREAS = 200;        // 20x10 hex grid tiles
+export const VISIBLE_GROUNDS = 200;      // 20x10 hex grid tiles
 export const VISIBLE_GRAINS = 2000;      // instanced spheres
 export const VISIBLE_MOLECULES = 729;    // 9^3 crystal lattice
 export const VISIBLE_ATOMS = 500;        // molecular bond structure
@@ -53,24 +55,33 @@ export const DEEP_ZOOM_LEVELS = [
   { id: "quark",    label: "String",   param: null,         visible: VISIBLE_STRINGS,   total: STRINGS_PER_QUARK,   keysPerUnit: KEYS_PER_STRING },
 ];
 
+// Safe BigInt coercion for URL params — junk like "abc" becomes 0 instead of
+// throwing a SyntaxError that white-screens the app. Digit strings keep full
+// precision (ids can exceed Number.MAX_SAFE_INTEGER).
+export function toBigIntSafe(value) {
+  if (value == null) return 0n;
+  const s = String(value).trim();
+  return /^\d+$/.test(s) ? BigInt(s) : 0n;
+}
+
 export function computeKeyStart(galaxyId, starId, planetId, regionId, sectorId, areaId, groundId, grainId, moleculeId, atomId, quarkId) {
-  let start = BigInt(galaxyId ?? 0) * KEYS_PER_GALAXY;
-  start += BigInt(starId ?? 0) * KEYS_PER_STAR;
-  start += BigInt(planetId ?? 0) * KEYS_PER_PLANET;
-  if (regionId != null) start += BigInt(regionId) * KEYS_PER_REGION;
-  if (sectorId != null) start += BigInt(sectorId) * KEYS_PER_SECTOR;
-  if (areaId != null) start += BigInt(areaId) * KEYS_PER_AREA;
-  if (groundId != null) start += BigInt(groundId) * KEYS_PER_GROUND;
-  if (grainId != null) start += BigInt(grainId) * KEYS_PER_GRAIN;
-  if (moleculeId != null) start += BigInt(moleculeId) * KEYS_PER_MOLECULE;
-  if (atomId != null) start += BigInt(atomId) * KEYS_PER_ATOM;
-  if (quarkId != null) start += BigInt(quarkId) * KEYS_PER_QUARK;
+  let start = toBigIntSafe(galaxyId) * KEYS_PER_GALAXY;
+  start += toBigIntSafe(starId) * KEYS_PER_STAR;
+  start += toBigIntSafe(planetId) * KEYS_PER_PLANET;
+  if (regionId != null) start += toBigIntSafe(regionId) * KEYS_PER_REGION;
+  if (sectorId != null) start += toBigIntSafe(sectorId) * KEYS_PER_SECTOR;
+  if (areaId != null) start += toBigIntSafe(areaId) * KEYS_PER_AREA;
+  if (groundId != null) start += toBigIntSafe(groundId) * KEYS_PER_GROUND;
+  if (grainId != null) start += toBigIntSafe(grainId) * KEYS_PER_GRAIN;
+  if (moleculeId != null) start += toBigIntSafe(moleculeId) * KEYS_PER_MOLECULE;
+  if (atomId != null) start += toBigIntSafe(atomId) * KEYS_PER_ATOM;
+  if (quarkId != null) start += toBigIntSafe(quarkId) * KEYS_PER_QUARK;
   return start;
 }
 
 export function computeHexKey(galaxyId, starId, planetId, regionId, sectorId, areaId, groundId, grainId, moleculeId, atomId, quarkId, offset = 0) {
   const start = computeKeyStart(galaxyId, starId, planetId, regionId, sectorId, areaId, groundId, grainId, moleculeId, atomId, quarkId);
-  const key = start + BigInt(offset);
+  const key = start + toBigIntSafe(offset);
   return key.toString(16).padStart(64, "0").toUpperCase();
 }
 

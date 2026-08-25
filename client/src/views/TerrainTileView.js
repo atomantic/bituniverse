@@ -167,18 +167,32 @@ export default function TerrainTileView({
       const idx = intersects[0].instanceId;
       if (idx !== hoveredIdx) { setHoveredIdx(idx); onChildHover?.(idx); document.body.style.cursor = "pointer"; }
     } else if (hoveredIdx !== null) { setHoveredIdx(null); onChildHover?.(null); document.body.style.cursor = "default"; }
+  });
 
-    for (let i = 0; i < cellCount; i++) {
+  // Recolor only the affected tiles when hover changes — not every tile every frame
+  const prevHoveredRef = React.useRef(null);
+  React.useEffect(() => {
+    if (!meshRef.current || !meshRef.current.instanceColor) {
+      prevHoveredRef.current = hoveredIdx;
+      return;
+    }
+    const colorFor = (i, highlighted) => {
       const [r, g, b] = hexData[i].biome.color;
       const v = (hashString(`${seedVal}h${i}`) % 100) / 800;
-      if (i === hoveredIdx) {
-        meshRef.current.setColorAt(i, new THREE.Color(Math.min(1, r + 0.3), Math.min(1, g + 0.3), Math.min(1, b + 0.3)));
-      } else {
-        meshRef.current.setColorAt(i, new THREE.Color(r + v, g + v, b + v));
-      }
+      return highlighted
+        ? new THREE.Color(Math.min(1, r + 0.3), Math.min(1, g + 0.3), Math.min(1, b + 0.3))
+        : new THREE.Color(r + v, g + v, b + v);
+    };
+    const prev = prevHoveredRef.current;
+    if (prev !== null && prev !== hoveredIdx && hexData[prev]) {
+      meshRef.current.setColorAt(prev, colorFor(prev, false));
     }
-    if (meshRef.current.instanceColor) meshRef.current.instanceColor.needsUpdate = true;
-  });
+    if (hoveredIdx !== null && hexData[hoveredIdx]) {
+      meshRef.current.setColorAt(hoveredIdx, colorFor(hoveredIdx, true));
+    }
+    prevHoveredRef.current = hoveredIdx;
+    meshRef.current.instanceColor.needsUpdate = true;
+  }, [hoveredIdx, hexData, seedVal]);
 
   React.useEffect(() => { return () => { document.body.style.cursor = "default"; }; }, []);
 

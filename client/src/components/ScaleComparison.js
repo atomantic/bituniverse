@@ -81,6 +81,8 @@ export default function ScaleComparison({ active, onClose, view }) {
       sx={{
         position: "absolute",
         inset: 0,
+        role: "dialog",
+        "aria-modal": true,
         zIndex: 100,
         display: "flex",
         alignItems: "center",

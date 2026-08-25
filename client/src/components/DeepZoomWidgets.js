@@ -196,7 +196,7 @@ export function QuarkWidget({ stringId, hexKey }) {
       </Typography>
       <Box sx={{ display: "flex", flexDirection: "column", gap: 0.25 }}>
         <InfoRow label="Visible Strings" value={VISIBLE_STRINGS.toLocaleString()} />
-        <InfoRow label="Total Keys" value={formatKeysCount(STRINGS_PER_QUARK)} />
+        <InfoRow label="Keys per String" value={formatKeysCount(KEYS_PER_STRING)} />
       </Box>
       {hexKey && (
         <Box sx={{ mt: 0.5, pt: 0.5, borderTop: "1px solid rgba(77, 244, 255, 0.1)" }}>

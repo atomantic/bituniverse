@@ -7,9 +7,14 @@ The v1.0 (Explorable Universe) and v2.0 (Educational Depth) milestones from GOAL
 
 ## Next Up
 
-1. **Delete dead code** — `client/src/views/SurfaceView.js`, `client/src/components/SurfaceInfoPanel.js`, and `client/src/Integrations.js` are no longer imported anywhere. The earlier PLAN claimed `SurfaceView`/`SurfaceInfoPanel` were deleted; they weren't. `Integrations.js` is a vestigial component referencing a non-existent `socketIO`.
-2. **Trim unused root deps** — `@mempool/mempool.js`, `async`, `node-telegram-bot-api`, `socket.io`, `uuid`, and `ws` are declared in root `package.json` but not imported by `server/index.js` (or anywhere). Removing them shrinks attack surface and install size.
-3. **Refresh README for v2.0 features** — README still only documents galaxy/star/planet routes and a small keyboard set. Add the new shortcuts (T, F, H, B, A, K, S) and screenshots/GIFs of the educational overlays.
+1. **Refresh README for v2.0 features** — README still only documents galaxy/star/planet routes. Add the deep-zoom routes and screenshots/GIFs of the educational overlays.
+
+## Recently Completed (cleanup pass)
+
+- Dead code removed: `SurfaceView`, `SurfaceInfoPanel`, `Integrations.js`, `Configuration.js`, unused 3D components (`GalaxySystem`, `SolarSystem`, `CelestialBody`, `ConnectionLine`, `Star`), `CompositionShader`, `Footer`, legacy info panels, `createParticleTexture`.
+- Unused root deps trimmed (`@mempool/mempool.js`, `async`, `node-telegram-bot-api`, `socket.io`, `ws`); the missing `cors` dependency was replaced with hand-rolled CORS headers, plus an SPA fallback route so deep links resolve.
+- Fixed: infinite re-render loop on Planet view; global hotkeys firing while typing in inputs; duplicate OrbitControls fighting over the camera (galaxy + solar-system views); corrupt-localStorage white-screen in Bookmarks; brute-force progress bar math (100×); star hover/select highlighting every star of the same type (per-star id attribute); BigInt crashes on junk URL params; random-jump precision loss above 2^53 (BigInt sampling); negative-index wrap-around; uncancellable camera animation loops; AutoExplore duplicated timer chains; per-frame instanced-mesh recoloring (Planet/Globe/TerrainTile views); visible-count mismatches between URL wrap ranges and rendered grids.
+- A11y: HUD toggles are real buttons, overlays expose `role="dialog"`/`aria-modal`.
 
 ## Backlog
 

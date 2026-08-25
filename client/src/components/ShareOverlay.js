@@ -62,10 +62,42 @@ export default function ShareOverlay({ active, onClose, view }) {
   const params = useParams();
   const overlayRef = useRef(null);
 
-  // Reset copied state when overlay opens
+  const copyTimerRef = useRef(null);
+
+  // Reset copied state when overlay opens; clear pending timer on close/unmount
   useEffect(() => {
-    if (active) setCopied(null);
+    if (active) {
+      setCopied(null);
+    } else if (copyTimerRef.current) {
+      clearTimeout(copyTimerRef.current);
+      copyTimerRef.current = null;
+    }
+    return () => {
+      if (copyTimerRef.current) {
+        clearTimeout(copyTimerRef.current);
+        copyTimerRef.current = null;
+      }
+    };
   }, [active]);
+
+  const copyToClipboard = useCallback(async (text, kind) => {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      // Fallback for insecure origins / denied permissions
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+    }
+    setCopied(kind);
+    if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    copyTimerRef.current = setTimeout(() => setCopied(null), 2000);
+  }, []);
 
   // Close on Escape
   useEffect(() => {
@@ -87,16 +119,12 @@ export default function ShareOverlay({ active, onClose, view }) {
   const shareText = `Exploring the SHA-256 keyspace at ${viewLabel} level: ${locationDesc}\n\n${currentUrl}`;
 
   const handleCopyLink = useCallback(() => {
-    navigator.clipboard.writeText(currentUrl);
-    setCopied("link");
-    setTimeout(() => setCopied((v) => v === "link" ? null : v), 2000);
-  }, [currentUrl]);
+    copyToClipboard(currentUrl, "link");
+  }, [copyToClipboard, currentUrl]);
 
   const handleCopyText = useCallback(() => {
-    navigator.clipboard.writeText(shareText);
-    setCopied("text");
-    setTimeout(() => setCopied((v) => v === "text" ? null : v), 2000);
-  }, [shareText]);
+    copyToClipboard(shareText, "text");
+  }, [copyToClipboard, shareText]);
 
   if (!active) return null;
 
@@ -106,6 +134,8 @@ export default function ShareOverlay({ active, onClose, view }) {
       sx={{
         position: "absolute",
         inset: 0,
+        role: "dialog",
+        "aria-modal": true,
         zIndex: 100,
         display: "flex",
         alignItems: "center",

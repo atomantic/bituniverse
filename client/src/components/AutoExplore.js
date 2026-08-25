@@ -32,6 +32,22 @@ const EXPLORE_STEPS = [
 
 const TOTAL_GALAXIES = Number(TOTAL_KEYS / KEYS_PER_GALAXY);
 
+// Random galaxy id across the full keyspace via BigInt — Math.random() above
+// 2^53 produces floats whose toString() is exponential ("4.2e+64"), which
+// parseInt would later mangle back to a tiny id.
+function randomGalaxyId() {
+  const digits = String(Math.ceil(TOTAL_GALAXIES)).length;
+  let candidate;
+  do {
+    let s = "";
+    for (let i = 0; i < digits; i++) {
+      s += Math.floor(Math.random() * 10);
+    }
+    candidate = BigInt(s);
+  } while (candidate >= BigInt(Math.ceil(TOTAL_GALAXIES)));
+  return candidate.toString();
+}
+
 // Random int in [0, max)
 function randInt(max) {
   return Math.floor(Math.random() * max);
@@ -82,7 +98,7 @@ export default function AutoExplore({ active, onClose }) {
   // Generate random choices for one full cycle
   const generateChoices = useCallback(() => {
     const choices = {
-      galaxyId: randInt(TOTAL_GALAXIES),
+      galaxyId: randomGalaxyId(),
       starId: randInt(1000),
       planetId: randInt(10),
       deepIds: DEEP_VISIBLE.map((max) => randInt(max)),
@@ -91,31 +107,24 @@ export default function AutoExplore({ active, onClose }) {
     return choices;
   }, []);
 
-  // Advance to the next step
+  const stepRef = useRef(0);
+
+  // Advance to the next step. Side effects (navigation, timers) live outside
+  // any setState updater — React may double-invoke updaters, which would
+  // duplicate the timeout chain and make the explorer accelerate.
   const advanceStep = useCallback(() => {
     if (!activeRef.current) return;
 
-    setCurrentStep((prev) => {
-      const next = prev + 1;
-
-      if (next >= EXPLORE_STEPS.length) {
-        // Cycle complete — generate new random path and start over
-        setCycleCount((c) => c + 1);
-        const choices = generateChoices();
-        const path = buildPathForStep(0, choices);
-        navigate(path);
-        // Schedule next advance
-        timerRef.current = setTimeout(() => advanceStep(), EXPLORE_STEPS[0].pause);
-        return 0;
-      }
-
-      // Navigate to next step
-      const path = buildPathForStep(next, choicesRef.current);
-      navigate(path);
-      // Schedule next advance
-      timerRef.current = setTimeout(() => advanceStep(), EXPLORE_STEPS[next].pause);
-      return next;
-    });
+    let next = stepRef.current + 1;
+    if (next >= EXPLORE_STEPS.length) {
+      setCycleCount((c) => c + 1);
+      generateChoices();
+      next = 0;
+    }
+    stepRef.current = next;
+    setCurrentStep(next);
+    navigate(buildPathForStep(next, choicesRef.current));
+    timerRef.current = setTimeout(() => advanceStep(), EXPLORE_STEPS[next].pause);
   }, [navigate, generateChoices]);
 
   // Start/stop the auto-explore loop
@@ -123,6 +132,7 @@ export default function AutoExplore({ active, onClose }) {
     if (active) {
       // Start: generate choices and navigate to the first step
       const choices = generateChoices();
+      stepRef.current = 0;
       setCurrentStep(0);
       setCycleCount(0);
       const path = buildPathForStep(0, choices);
