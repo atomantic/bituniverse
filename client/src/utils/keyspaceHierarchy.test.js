@@ -106,7 +106,7 @@ describe("keyspaceHierarchy", () => {
   });
 
   describe("input cleaning", () => {
-    it("strips a 0x prefix, surrounding whitespace, and pads short keys", () => {
+    it("strips a 0x prefix and all whitespace, and pads short keys", () => {
       // 255 keys sits inside galaxy 0; with KEYS_PER_STRING === 1 the raw
       // value surfaces as stringId.
       expect(keyToLocation("0xFF").stringId).toBe(255);
