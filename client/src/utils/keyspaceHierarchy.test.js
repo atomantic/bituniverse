@@ -72,10 +72,11 @@ describe("keyspaceHierarchy", () => {
       }
     });
 
-    it("maps max key to max IDs without overflow", () => {
+    it("decodes max key into the trailing partial galaxy without overflow", () => {
       const loc = keyToLocation(F64);
-      // galaxyId = floor((2^256 - 1) / KEYS_PER_GALAXY); since KEYS_PER_GALAXY
-      // floors 2^256/10^12, the remainder leaves one extra partial galaxy.
+      // KEYS_PER_GALAXY floors 2^256/10^12, so the leftover keys form one
+      // extra partial galaxy whose ID (10^12) is outside 0..10^12-1 — a
+      // known quirk of floor division, pinned here rather than hidden.
       expect(loc.galaxyId).toBe(10 ** 12);
       // Exact decode of the trailing partial-galaxy remainder (computed from
       // the current constants; guards against silent decoding regressions).
@@ -83,7 +84,7 @@ describe("keyspaceHierarchy", () => {
       expect(loc.stringId).toBe(64911);
       for (const field of [
         "starId", "planetId", "regionId", "sectorId", "areaId",
-        "groundId", "grainId", "moleculeId", "atomId", "quarkId", "stringId",
+        "groundId", "grainId", "moleculeId", "atomId",
       ]) {
         expect(Number.isFinite(loc[field])).toBe(true);
         expect(loc[field]).toBeGreaterThanOrEqual(0);
@@ -98,6 +99,19 @@ describe("keyspaceHierarchy", () => {
         expect(keyToLocation(input)).toBeNull();
       }
     );
+
+    it("throws TypeError for non-string input (current, unguarded contract)", () => {
+      expect(() => keyToLocation(null)).toThrow(TypeError);
+    });
+  });
+
+  describe("input cleaning", () => {
+    it("strips a 0x prefix, surrounding whitespace, and pads short keys", () => {
+      const loc = keyToLocation("0xFF");
+      expect(loc.galaxyId).toBe(255);
+      expect(keyToLocation(" FF ").galaxyId).toBe(255);
+      expect(keyToLocation("ff").galaxyId).toBe(255);
+    });
   });
 
   describe("formatting and derived constants", () => {
