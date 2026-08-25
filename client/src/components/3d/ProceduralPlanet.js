@@ -1,10 +1,6 @@
 import React, { useRef, useEffect, useMemo, forwardRef } from "react";
 import * as THREE from "three";
-import { useFrame, useThree } from "@react-three/fiber";
-import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
-import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
-import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
-import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
+import { useFrame } from "@react-three/fiber";
 import { PLANET_TYPES } from "../../config/planetTypes";
 import {
   toonVertexShader,
@@ -111,6 +107,19 @@ function fbm(x, y, z, octaves = 4) {
   return value / maxValue;
 }
 
+// Derive a numeric seed from any seed value (views pass string seeds)
+function numericSeed(seed) {
+  if (typeof seed === "number") return seed;
+  if (typeof seed === "string" && seed.length > 0) {
+    let h = 0;
+    for (let i = 0; i < seed.length; i++) {
+      h = ((h << 5) - h + seed.charCodeAt(i)) | 0;
+    }
+    return Math.abs(h % 100000);
+  }
+  return 0;
+}
+
 const ProceduralPlanet = forwardRef(
   (
     {
@@ -139,8 +148,6 @@ const ProceduralPlanet = forwardRef(
     const meshRef = useRef();
     const atmosphereRef = useRef();
     const geometryRef = useRef();
-    const composerRef = useRef();
-    const { gl, scene, camera } = useThree();
 
     // Resolve planet type config for palette/rings/octaves
     const typeConfig = planetTypeConfig ?? type;
@@ -149,6 +156,8 @@ const ProceduralPlanet = forwardRef(
     const hasRings = typeConfig?.hasRings ?? false;
     const resolvedAtmosphereColor =
       atmosphereColor ?? typeConfig?.atmosphereColor ?? MOEBIUS_PALETTE.atmosphere;
+
+    const seedVal = useMemo(() => numericSeed(seed), [seed]);
 
     const planetMaterial = useMemo(() => {
       const hasElevation = !!palette;
@@ -192,13 +201,13 @@ const ProceduralPlanet = forwardRef(
           ringColor: {
             value: palette?.mid ?? new THREE.Color(color),
           },
-          seed: { value: typeof seed === "number" ? seed : 0 },
+          seed: { value: seedVal },
         },
         transparent: true,
         side: THREE.DoubleSide,
         depthWrite: false,
       });
-    }, [hasRings, palette, color, seed]);
+    }, [hasRings, palette, color, seedVal]);
 
     useFrame(({ clock }) => {
       const time = clock.getElapsedTime();
@@ -231,11 +240,11 @@ const ProceduralPlanet = forwardRef(
         const vector = new THREE.Vector3(x, y, z);
         vector.normalize();
 
-        const seedVal = typeof seed === "number" ? seed : 0;
+        const seedValLocal = seedVal;
         const height = fbm(
-          vector.x * 4 + seedVal,
-          vector.y * 4 + seedVal,
-          vector.z * 4 + seedVal,
+          vector.x * 4 + seedValLocal,
+          vector.y * 4 + seedValLocal,
+          vector.z * 4 + seedValLocal,
           octaves
         );
 
@@ -277,50 +286,33 @@ const ProceduralPlanet = forwardRef(
         atmosphereRef.current.geometry = atmosphereGeometry;
       }
 
-      // Set up post-processing
-      const renderPass = new RenderPass(scene, camera);
-      const bloomPass = new UnrealBloomPass(
-        new THREE.Vector2(window.innerWidth, window.innerHeight),
-        1.5,
-        0.4,
-        0.85
-      );
-      const outputPass = new OutputPass();
-
-      const composer = new EffectComposer(gl);
-      composer.addPass(renderPass);
-      composer.addPass(bloomPass);
-      composer.addPass(outputPass);
-
-      composerRef.current = composer;
-
-      // Cleanup function
+      // Cleanup function — dispose only the geometry created here; the
+      // memoized materials are disposed by their own effects below
       return () => {
         if (geometryRef.current) {
           geometryRef.current.dispose();
-        }
-        if (meshRef.current?.material) {
-          meshRef.current.material.dispose();
-        }
-        if (atmosphereRef.current?.material) {
-          atmosphereRef.current.material.dispose();
-        }
-        if (composerRef.current) {
-          composerRef.current.dispose();
+          geometryRef.current = null;
         }
       };
     }, [
       radius,
-      seed,
+      seedVal,
       terrainExaggeration,
       hasAtmosphere,
-      gl,
-      scene,
-      camera,
       detail,
       octaves,
       planetMaterial,
     ]);
+
+    // Dispose materials when they are replaced or on unmount
+    useEffect(() => () => planetMaterial.dispose(), [planetMaterial]);
+    useEffect(() => () => atmosphereMaterial.dispose(), [atmosphereMaterial]);
+    useEffect(
+      () => () => {
+        if (ringMaterial) ringMaterial.dispose();
+      },
+      [ringMaterial]
+    );
 
     return (
       <group position={position}>

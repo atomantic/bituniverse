@@ -50,7 +50,6 @@ import { getGalaxyPosition, getGalaxyProperties } from "./utils/helpers";
 import { KEYS_PER_GALAXY, TOTAL_KEYS } from "./utils/constants";
 import {
   BLOOM_PARAMS,
-  BLOOM_LAYER,
   CAMERA,
   ORBIT_CONTROLS,
   FOG,
@@ -166,10 +165,43 @@ function SceneContent({
   // Keyboard navigation
   useEffect(() => {
     const totalGalaxies = Number(TOTAL_KEYS / KEYS_PER_GALAXY);
-    const wrapIndex = (index, max) => index < 0 ? max + (index % max) : index % max;
+    // Always lands in [0, max) — even for negative multiples of max
+    const wrapIndex = (index, max) => ((index % max) + max) % max;
+    // Random galaxy id across the full keyspace via BigInt (avoids float
+    // precision loss / exponential notation that parseInt would mangle)
+    const randomGalaxyIndex = () => {
+      const digits = String(totalGalaxies).length;
+      let candidate;
+      do {
+        let s = "";
+        for (let i = 0; i < digits; i++) {
+          s += Math.floor(Math.random() * 10);
+        }
+        candidate = BigInt(s);
+      } while (candidate >= BigInt(Math.ceil(totalGalaxies)));
+      return candidate.toString();
+    };
     const deepIdx = DEEP_VIEWS.indexOf(view);
     const levelDef = deepIdx >= 0 ? DEEP_ZOOM_LEVELS[deepIdx] : null;
     const visibleCount = levelDef?.visible ?? 0;
+
+    // Cancellable camera animation helper
+    let cameraAnimId = 0;
+    const animateCamera = (controls, endPosition, duration = 1000) => {
+      const animId = ++cameraAnimId;
+      const startPosition = camera.position.clone();
+      const startTime = Date.now();
+      function animate() {
+        if (animId !== cameraAnimId) return; // superseded or unmounted
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const t = progress < 0.5 ? 2 * progress * progress : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+        camera.position.lerpVectors(startPosition, endPosition, t);
+        controls.update();
+        if (progress < 1) requestAnimationFrame(animate);
+      }
+      animate();
+    };
 
     const handlers = {
       [KEYBOARD_ACTIONS.TOGGLE_CONTROLS]: () => setIsControlsVisible((prev) => !prev),
@@ -227,8 +259,8 @@ function SceneContent({
         }
       },
       [KEYBOARD_ACTIONS.RANDOM_JUMP]: () => {
-        const randomIndex = Math.floor(Math.random() * totalGalaxies);
-        onKeyOffsetChange(randomIndex);
+        const randomIndex = randomGalaxyIndex();
+        onKeyOffsetChange(parseInt(randomIndex, 10));
         navigate(`/galaxy/${randomIndex}`, { replace: true });
       },
       [KEYBOARD_ACTIONS.ZOOM_TO_CENTER]: () => {
@@ -237,37 +269,13 @@ function SceneContent({
         const galaxyIndex = parseInt(baseKeyOffset, 10);
         const position = getGalaxyPosition(galaxyIndex);
         controls.target.set(position[0], position[1], position[2]);
-        const startPosition = camera.position.clone();
-        const endPosition = new THREE.Vector3(position[0] + 50, position[1] + 50, position[2] + 50);
-        const duration = 1000;
-        const startTime = Date.now();
-        function animate() {
-          const elapsed = Date.now() - startTime;
-          const progress = Math.min(elapsed / duration, 1);
-          const t = progress < 0.5 ? 2 * progress * progress : 1 - Math.pow(-2 * progress + 2, 2) / 2;
-          camera.position.lerpVectors(startPosition, endPosition, t);
-          controls.update();
-          if (progress < 1) requestAnimationFrame(animate);
-        }
-        animate();
+        animateCamera(controls, new THREE.Vector3(position[0] + 50, position[1] + 50, position[2] + 50));
       },
       [KEYBOARD_ACTIONS.RESET_CAMERA]: () => {
         if (!camera || !controlsRef.current) return;
         const controls = controlsRef.current;
         controls.target.set(0, 0, 0);
-        const startPosition = camera.position.clone();
-        const endPosition = new THREE.Vector3(CAMERA.position[0], CAMERA.position[1], CAMERA.position[2]);
-        const duration = 1000;
-        const startTime = Date.now();
-        function animate() {
-          const elapsed = Date.now() - startTime;
-          const progress = Math.min(elapsed / duration, 1);
-          const t = progress < 0.5 ? 2 * progress * progress : 1 - Math.pow(-2 * progress + 2, 2) / 2;
-          camera.position.lerpVectors(startPosition, endPosition, t);
-          controls.update();
-          if (progress < 1) requestAnimationFrame(animate);
-        }
-        animate();
+        animateCamera(controls, new THREE.Vector3(CAMERA.position[0], CAMERA.position[1], CAMERA.position[2]));
       },
       [KEYBOARD_ACTIONS.ZOOM_IN]: () => {
         if (deepIdx >= 0 && deepIdx < DEEP_VIEWS.length - 1 && hoveredChild !== null) {
@@ -297,7 +305,10 @@ function SceneContent({
 
     const handleKeyPress = createKeyboardListener(handlers);
     window.addEventListener("keydown", handleKeyPress);
-    return () => window.removeEventListener("keydown", handleKeyPress);
+    return () => {
+      cameraAnimId++; // cancel any in-flight camera animation on rebind/unmount
+      window.removeEventListener("keydown", handleKeyPress);
+    };
   }, [baseKeyOffset, onKeyOffsetChange, navigate, camera, setIsControlsVisible, setIsInfoVisible, setIsTourActive, setIsKeyLookupActive, setIsShareActive, setIsHistoryActive, setIsBruteForceActive, setIsAutoExploreActive, setIsBookmarksActive, setIsScaleComparisonActive, onGalaxySelect, view, params, hoveredChild, galaxyId, starId, planetId]);
 
   return (
@@ -325,6 +336,9 @@ function SceneContent({
         <OrbitControls
           ref={controlsRef}
           {...ORBIT_CONTROLS}
+          // Solar-system scale needs much closer zoom limits than galaxy scale
+          minDistance={view === "solarSystem" ? 10 : ORBIT_CONTROLS.minDistance}
+          maxDistance={view === "solarSystem" ? 300 : ORBIT_CONTROLS.maxDistance}
           onEnd={(e) => {
             if (DEBUG_LOGGING) {
               const controls = e.target;
@@ -372,12 +386,32 @@ function SceneContent({
           luminanceSmoothing={0.8}
           luminanceThreshold={BLOOM_PARAMS.bloomThreshold}
           intensity={BLOOM_PARAMS.bloomStrength}
-          exposure={BLOOM_PARAMS.exposure}
-          renderToScreen={false}
-          selection={[BLOOM_LAYER]}
         />
       </EffectComposer>
     </>
+  );
+}
+
+// Accessible HUD toggle button (real <button> so it is keyboard-focusable)
+function HudToggleButton({ active = false, onClick, children }) {
+  return (
+    <Typography
+      component="button"
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      sx={{
+        background: "none", border: "none", padding: 0, font: "inherit",
+        color: active ? "var(--theme-secondary)" : "var(--theme-accent)",
+        fontSize: "0.5rem",
+        opacity: active ? 0.8 : 0.4,
+        cursor: "pointer", userSelect: "none",
+        "&:hover": { opacity: 0.8 },
+        "&:focus-visible": { outline: "1px solid var(--theme-secondary)", opacity: 0.9 },
+      }}
+    >
+      {children}
+    </Typography>
   );
 }
 
@@ -617,60 +651,15 @@ function Scene({ baseKeyOffset, onKeyOffsetChange, view = "galaxy" }) {
               </Box>
               <Typography sx={{ color: "var(--theme-text)", fontSize: "0.5rem" }}>{Math.round(keyspacePosition)}%</Typography>
             </Box>
-            <Typography
-              onClick={() => setIsTourActive((v) => !v)}
-              sx={{ color: isTourActive ? "var(--theme-secondary)" : "var(--theme-accent)", fontSize: "0.5rem", opacity: isTourActive ? 0.8 : 0.4, cursor: "pointer", userSelect: "none", "&:hover": { opacity: 0.8 } }}
-            >
-              [T] Tour
-            </Typography>
-            <Typography
-              onClick={() => setIsKeyLookupActive((v) => !v)}
-              sx={{ color: isKeyLookupActive ? "var(--theme-secondary)" : "var(--theme-accent)", fontSize: "0.5rem", opacity: isKeyLookupActive ? 0.8 : 0.4, cursor: "pointer", userSelect: "none", "&:hover": { opacity: 0.8 } }}
-            >
-              [F] Find Key
-            </Typography>
-            <Typography
-              onClick={() => setIsShareActive((v) => !v)}
-              sx={{ color: isShareActive ? "var(--theme-secondary)" : "var(--theme-accent)", fontSize: "0.5rem", opacity: isShareActive ? 0.8 : 0.4, cursor: "pointer", userSelect: "none", "&:hover": { opacity: 0.8 } }}
-            >
-              [S] Share
-            </Typography>
-            <Typography
-              onClick={() => setIsHistoryActive((v) => !v)}
-              sx={{ color: isHistoryActive ? "var(--theme-secondary)" : "var(--theme-accent)", fontSize: "0.5rem", opacity: isHistoryActive ? 0.8 : 0.4, cursor: "pointer", userSelect: "none", "&:hover": { opacity: 0.8 } }}
-            >
-              [H] History
-            </Typography>
-            <Typography
-              onClick={() => setIsBruteForceActive((v) => !v)}
-              sx={{ color: isBruteForceActive ? "var(--theme-secondary)" : "var(--theme-accent)", fontSize: "0.5rem", opacity: isBruteForceActive ? 0.8 : 0.4, cursor: "pointer", userSelect: "none", "&:hover": { opacity: 0.8 } }}
-            >
-              [B] Brute Force
-            </Typography>
-            <Typography
-              onClick={() => setIsAutoExploreActive((v) => !v)}
-              sx={{ color: isAutoExploreActive ? "var(--theme-secondary)" : "var(--theme-accent)", fontSize: "0.5rem", opacity: isAutoExploreActive ? 0.8 : 0.4, cursor: "pointer", userSelect: "none", "&:hover": { opacity: 0.8 } }}
-            >
-              [A] Auto-Explore
-            </Typography>
-            <Typography
-              onClick={() => setIsBookmarksActive((v) => !v)}
-              sx={{ color: isBookmarksActive ? "var(--theme-secondary)" : "var(--theme-accent)", fontSize: "0.5rem", opacity: isBookmarksActive ? 0.8 : 0.4, cursor: "pointer", userSelect: "none", "&:hover": { opacity: 0.8 } }}
-            >
-              [K] Bookmarks
-            </Typography>
-            <Typography
-              onClick={() => setIsScaleComparisonActive((v) => !v)}
-              sx={{ color: isScaleComparisonActive ? "var(--theme-secondary)" : "var(--theme-accent)", fontSize: "0.5rem", opacity: isScaleComparisonActive ? 0.8 : 0.4, cursor: "pointer", userSelect: "none", "&:hover": { opacity: 0.8 } }}
-            >
-              [X] Compare
-            </Typography>
-            <Typography
-              onClick={() => setIsControlsVisible((v) => !v)}
-              sx={{ color: "var(--theme-accent)", fontSize: "0.5rem", opacity: 0.4, cursor: "pointer", userSelect: "none", "&:hover": { opacity: 0.8 } }}
-            >
-              [C] Controls
-            </Typography>
+            <HudToggleButton active={isTourActive} onClick={() => setIsTourActive((v) => !v)}>[T] Tour</HudToggleButton>
+            <HudToggleButton active={isKeyLookupActive} onClick={() => setIsKeyLookupActive((v) => !v)}>[F] Find Key</HudToggleButton>
+            <HudToggleButton active={isShareActive} onClick={() => setIsShareActive((v) => !v)}>[S] Share</HudToggleButton>
+            <HudToggleButton active={isHistoryActive} onClick={() => setIsHistoryActive((v) => !v)}>[H] History</HudToggleButton>
+            <HudToggleButton active={isBruteForceActive} onClick={() => setIsBruteForceActive((v) => !v)}>[B] Brute Force</HudToggleButton>
+            <HudToggleButton active={isAutoExploreActive} onClick={() => setIsAutoExploreActive((v) => !v)}>[A] Auto-Explore</HudToggleButton>
+            <HudToggleButton active={isBookmarksActive} onClick={() => setIsBookmarksActive((v) => !v)}>[K] Bookmarks</HudToggleButton>
+            <HudToggleButton active={isScaleComparisonActive} onClick={() => setIsScaleComparisonActive((v) => !v)}>[X] Compare</HudToggleButton>
+            <HudToggleButton onClick={() => setIsControlsVisible((v) => !v)}>[C] Controls</HudToggleButton>
           </Box>
         </Box>
       </Box>

@@ -148,9 +148,6 @@ export class Galaxy {
     }
 
     this.totalStars = safeTotalStars;
-    console.log(
-      `Creating new Galaxy ${galaxyIndex} with ${this.totalStars} stars`
-    );
 
     this.generateStarData();
     this.generateNebulaClouds();
@@ -320,10 +317,6 @@ export class Galaxy {
         return;
       }
 
-      console.log(
-        `Created ${currentIndex} primary nebula particles with patchy distribution`
-      );
-
       // Create new arrays with the exact size needed
       const finalPositions = new Float32Array(currentIndex * 3);
       const finalColors = new Float32Array(currentIndex * 3);
@@ -381,14 +374,14 @@ export class Galaxy {
   }
 
   generateStarData() {
-    console.log("Generating star data with", this.totalStars, "stars");
-
     try {
       // Pre-allocate arrays with exact sizes for all stars
       const positions = new Float32Array(this.totalStars * 3);
       const colors = new Float32Array(this.totalStars * 3);
       const sizes = new Float32Array(this.totalStars);
       const starTypeIndices = new Float32Array(this.totalStars);
+      // Per-star id so the shader can highlight exactly one star
+      const starIds = new Float32Array(this.totalStars);
 
       // Pre-calculate star types and colors
       const starTypeColors = starTypes.color.map(
@@ -422,6 +415,7 @@ export class Galaxy {
         colors[idx + 2] = color.b;
         sizes[currentIndex] = starTypes.size[starType];
         starTypeIndices[currentIndex] = starType;
+        starIds[currentIndex] = currentIndex;
         currentIndex++;
       }
 
@@ -443,6 +437,7 @@ export class Galaxy {
         colors[idx + 2] = color.b;
         sizes[currentIndex] = starTypes.size[starType];
         starTypeIndices[currentIndex] = starType;
+        starIds[currentIndex] = currentIndex;
         currentIndex++;
       }
 
@@ -472,6 +467,7 @@ export class Galaxy {
           colors[idx + 2] = color.b;
           sizes[currentIndex] = starTypes.size[starType];
           starTypeIndices[currentIndex] = starType;
+          starIds[currentIndex] = currentIndex;
           currentIndex++;
         }
       }
@@ -497,6 +493,7 @@ export class Galaxy {
           colors[idx + 2] = color.b;
           sizes[currentIndex] = starTypes.size[starType];
           starTypeIndices[currentIndex] = starType;
+          starIds[currentIndex] = currentIndex;
           currentIndex++;
         }
       }
@@ -513,6 +510,10 @@ export class Galaxy {
         "starType",
         new THREE.BufferAttribute(starTypeIndices, 1)
       );
+      geometry.setAttribute("starId", new THREE.BufferAttribute(starIds, 1));
+
+      geometry.setAttribute("starId", new THREE.BufferAttribute(starIds, 1));
+      geometry.attributes.starId.usage = THREE.StaticDrawUsage;
 
       // Store star data for hover detection
       this.starData = {
@@ -534,13 +535,13 @@ export class Galaxy {
         },
         vertexShader: `
           attribute float size;
-          attribute float starType;
+          attribute float starId;
           varying vec3 vColor;
-          varying float vStarType;
-          
+          varying float vStarId;
+
           void main() {
             vColor = color;
-            vStarType = starType;
+            vStarId = starId;
             vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
             gl_PointSize = size * (300.0 / -mvPosition.z);
             gl_Position = projectionMatrix * mvPosition;
@@ -548,30 +549,30 @@ export class Galaxy {
         `,
         fragmentShader: `
           varying vec3 vColor;
-          varying float vStarType;
+          varying float vStarId;
           uniform float hoveredStarIndex;
           uniform float selectedStarIndex;
-          
+
           void main() {
             vec2 center = vec2(0.5, 0.5);
             float dist = length(gl_PointCoord - center);
-            
+
             if (dist > 0.5) {
               discard;
             }
-            
+
             // Make the stars brighter by multiplying the color
             vec3 finalColor = vColor * 2.0;
-            
-            // Highlight selected star with a stronger effect
-            if (vStarType == selectedStarIndex) {
+
+            // Highlight the single selected star
+            if (vStarId == selectedStarIndex) {
               finalColor = mix(finalColor, vec3(1.0), 0.7);
             }
-            // Highlight hovered star with a weaker effect
-            else if (vStarType == hoveredStarIndex) {
+            // Highlight the single hovered star
+            else if (vStarId == hoveredStarIndex) {
               finalColor = mix(finalColor, vec3(1.0), 0.3);
             }
-            
+
             gl_FragColor = vec4(finalColor, 1.0);
           }
         `,
@@ -710,10 +711,6 @@ export class Galaxy {
         return;
       }
 
-      console.log(
-        `Created ${currentIndex} secondary nebula particles with patchy distribution`
-      );
-
       // Create new arrays with the exact size needed
       const finalPositions = new Float32Array(currentIndex * 3);
       const finalColors = new Float32Array(currentIndex * 3);
@@ -806,15 +803,11 @@ export class Galaxy {
     if (intersects.length > 0) {
       const index = intersects[0].index;
       const starType = this.starData.starTypes[index];
-      const position = new THREE.Vector3(
-        this.starData.positions[index * 3],
-        this.starData.positions[index * 3 + 1],
-        this.starData.positions[index * 3 + 2]
-      );
 
-      if (this.hoveredStarIndex !== starType) {
-        this.hoveredStarIndex = starType;
-        this.stars.material.uniforms.hoveredStarIndex.value = starType;
+      // Highlight exactly the hovered star (by id, not by type)
+      if (this.hoveredStarIndex !== index) {
+        this.hoveredStarIndex = index;
+        this.stars.material.uniforms.hoveredStarIndex.value = index;
       }
     } else {
       if (this.hoveredStarIndex !== -1) {
@@ -846,9 +839,9 @@ export class Galaxy {
         this.starData.positions[index * 3 + 2]
       );
 
-      // Update selected star
-      this.selectedStarIndex = starType;
-      this.stars.material.uniforms.selectedStarIndex.value = starType;
+      // Update selected star (by id, so only that star is highlighted)
+      this.selectedStarIndex = index;
+      this.stars.material.uniforms.selectedStarIndex.value = index;
 
       if (this.onStarHover) {
         this.onStarHover({

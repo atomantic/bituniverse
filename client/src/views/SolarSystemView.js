@@ -1,6 +1,5 @@
-import React, { useEffect, useRef, useState, useMemo } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useThree, useFrame } from "@react-three/fiber";
-import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import * as THREE from "three";
 import { useParams, useNavigate } from "react-router-dom";
 import { starTypes } from "../config/starDistributions";
@@ -165,8 +164,7 @@ function StarMesh({ starColor, isSelected, isHovered, onHover, onUnhover, onClic
 function SolarSystem({ galaxyId, starId, onPlanetHover, onStarHover }) {
   const groupRef = useRef();
   const starRef = useRef();
-  const { camera, gl } = useThree();
-  const controlsRef = useRef();
+  const { camera } = useThree();
   const [planets, setPlanets] = useState([]);
   const [isReady, setIsReady] = useState(false);
   const [starColor, setStarColor] = useState(MOEBIUS_PALETTE.glow);
@@ -186,21 +184,7 @@ function SolarSystem({ galaxyId, starId, onPlanetHover, onStarHover }) {
     const planetData = generatePlanetData(galaxyId, starId);
     setPlanets(planetData);
     setIsReady(true);
-
-    // Set up OrbitControls
-    const controls = new OrbitControls(camera, gl.domElement);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.05;
-    controls.minDistance = 10;
-    controls.maxDistance = 300;
-    controls.target.set(0, 0, 0);
-    controls.update();
-    controlsRef.current = controls;
-
-    return () => {
-      controls.dispose();
-    };
-  }, [galaxyId, starId, camera, gl]);
+  }, [galaxyId, starId]);
 
   useEffect(() => {
     if (!camera) return;
@@ -248,12 +232,8 @@ function SolarSystem({ galaxyId, starId, onPlanetHover, onStarHover }) {
 
   return (
     <group ref={groupRef}>
-      {/* Ambient light for general illumination */}
-      <primitive object={new THREE.AmbientLight(0xffffff, 0.5)} />
-      <primitive
-        object={new THREE.PointLight(0xffffff, 1, 100)}
-        position={[0, 0, 0]}
-      />
+      <ambientLight intensity={0.5} />
+      <pointLight position={[0, 0, 0]} intensity={1} distance={100} />
 
       {/* Star */}
       <StarMesh

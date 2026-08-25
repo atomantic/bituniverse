@@ -50,8 +50,8 @@ function formatProgress(totalKeysPerSec, elapsedSeconds) {
   const logKeysChecked = Math.log10(totalKeysPerSec) + Math.log10(elapsedSeconds);
   const logFraction = logKeysChecked - KEYSPACE_LOG10;
   if (logFraction < -20) {
-    // Express as 10^-N
-    return `10^${logFraction.toFixed(1)}% (essentially 0%)`;
+    // Express the *percentage* as 10^N (percent = fraction × 100)
+    return `10^${(logFraction + 2).toFixed(1)}% (essentially 0%)`;
   }
   const fraction = Math.pow(10, logFraction);
   if (fraction < 0.000001) return `${(fraction * 100).toExponential(2)}%`;
@@ -110,6 +110,8 @@ export default function BruteForceCalculator({ active, onClose }) {
       sx={{
         position: "absolute",
         inset: 0,
+        role: "dialog",
+        "aria-modal": true,
         zIndex: 100,
         display: "flex",
         alignItems: "center",
@@ -209,10 +211,11 @@ export default function BruteForceCalculator({ active, onClose }) {
           <ResultRow label="Keys checked" value={results.keysChecked} />
           <ResultRow label="Keyspace covered" value={results.progress} highlight />
           <Box sx={{ height: 6, background: "rgba(77, 244, 255, 0.08)", borderRadius: 3, my: 0.75, overflow: "hidden" }}>
-            {/* The bar will always be invisibly thin — that's the point */}
+            {/* The bar will always be invisibly thin — that's the point.
+                The +2 in the exponent converts the keyspace fraction to a percent. */}
             <Box sx={{
               height: "100%",
-              width: `${Math.min(Math.pow(10, Math.log10(totalRate) + Math.log10(elapsedSeconds) - KEYSPACE_LOG10 + 2) * 100, 100)}%`,
+              width: `${Math.min(Math.pow(10, Math.log10(totalRate) + Math.log10(elapsedSeconds) - KEYSPACE_LOG10 + 2), 100)}%`,
               minWidth: results.progress !== "0%" ? 1 : 0,
               background: "var(--theme-secondary)",
               borderRadius: 3,

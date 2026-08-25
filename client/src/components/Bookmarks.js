@@ -26,9 +26,16 @@ const VIEW_DEPTH = {
 };
 
 function loadBookmarks() {
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if (!raw) return [];
-  return JSON.parse(raw);
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    // Corrupt storage should never brick the app — reset it
+    localStorage.removeItem(STORAGE_KEY);
+    return [];
+  }
 }
 
 function saveBookmarks(bookmarks) {
@@ -226,6 +233,8 @@ export default function Bookmarks({ active, onClose, currentPath, currentView, c
       sx={{
         position: "absolute",
         inset: 0,
+        role: "dialog",
+        "aria-modal": true,
         zIndex: 100,
         display: "flex",
         alignItems: "center",

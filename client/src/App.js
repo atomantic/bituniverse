@@ -73,8 +73,7 @@ function AppContent() {
     <Box sx={{ display: "flex", flexDirection: "column", height: "100vh", background: "#000" }}>
       <CssBaseline />
       <Box component="main" sx={{ flexGrow: 1, position: "relative", overflow: "hidden" }}>
-        <Router>
-          <Routes>
+        <Routes>
             <Route path="/" element={<Scene {...sceneProps} />} />
             <Route path="/galaxy/:galaxyId" element={<Scene {...sceneProps} />} />
             <Route path="/galaxy/:galaxyId/star/:starId" element={<Scene {...sceneProps} view="solarSystem" />} />
@@ -90,7 +89,6 @@ function AppContent() {
             <Route path={`${D8}/string/:stringId`} element={<Scene {...sceneProps} view="quark" />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
-        </Router>
       </Box>
     </Box>
   );
@@ -101,7 +99,9 @@ function App() {
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
       <div className="App">
-        <AppContent />
+        <Router>
+          <AppContent />
+        </Router>
       </div>
     </ThemeProvider>
   );

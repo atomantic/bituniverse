@@ -1,19 +1,15 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { useThree, useFrame } from "@react-three/fiber";
-import { OrbitControls } from "@react-three/drei";
 import { Galaxy } from "../components/3d/Galaxy";
 import * as THREE from "three";
-import { CAMERA, ORBIT_CONTROLS } from "../config/renderConfig";
+import { CAMERA } from "../config/renderConfig";
 import { TOTAL_KEYS, KEYS_PER_GALAXY } from "../utils/constants";
 import { useParams, useNavigate } from "react-router-dom";
 
 // Helper function to wrap galaxy index
 function wrapGalaxyIndex(index) {
   const totalGalaxies = Number(TOTAL_KEYS / KEYS_PER_GALAXY);
-  if (index < 0) {
-    return totalGalaxies + (index % totalGalaxies);
-  }
-  return index % totalGalaxies;
+  return ((index % totalGalaxies) + totalGalaxies) % totalGalaxies;
 }
 
 function GalaxyWrapper({ galaxyIndex = 0, onStarHover }) {
@@ -28,27 +24,18 @@ function GalaxyWrapper({ galaxyIndex = 0, onStarHover }) {
   const isInitialMount = useRef(true);
 
   const createGalaxy = useCallback(() => {
-    console.log(`Creating new galaxy with index: ${galaxyIndex}`);
     galaxyInstanceRef.current = new Galaxy(galaxyIndex);
 
-    if (process.env.REACT_APP_USE_WEBGPU === "true") {
-      galaxyInstanceRef.current.initWebGPU(gl);
-    }
-
     if (camera) {
-      console.log("Resetting camera position:", CAMERA.position);
       camera.position.set(...CAMERA.position);
       camera.updateProjectionMatrix();
       setIsReady(true);
-    } else {
-      console.warn("Camera not initialized yet");
     }
   }, [galaxyIndex, camera, gl]);
 
   // Initial mount effect
   useEffect(() => {
     if (isInitialMount.current) {
-      console.log("Initial mount - creating first galaxy");
       createGalaxy();
       isInitialMount.current = false;
     }
@@ -58,7 +45,6 @@ function GalaxyWrapper({ galaxyIndex = 0, onStarHover }) {
   useEffect(() => {
     if (galaxyIndex === previousIndexRef.current) return;
 
-    console.log("GalaxyWrapper galaxyIndex changed:", galaxyIndex);
     previousIndexRef.current = galaxyIndex;
 
     // Only trigger cleanup if we have an existing galaxy
@@ -76,7 +62,6 @@ function GalaxyWrapper({ galaxyIndex = 0, onStarHover }) {
   useEffect(() => {
     if (!isCleaningUp) return;
 
-    console.log(`Cleaning up previous galaxy for index: ${galaxyIndex}`);
     if (galaxyInstanceRef.current) {
       galaxyInstanceRef.current.cleanup();
       galaxyInstanceRef.current = null;
@@ -92,9 +77,11 @@ function GalaxyWrapper({ galaxyIndex = 0, onStarHover }) {
     }
   }, [camera, isReady, isCleaningUp]);
 
-  // Handle mouse move events
+  // Handle mouse move events (on the canvas only, so HUD clicks don't navigate)
   useEffect(() => {
     if (!galaxyInstanceRef.current || !isReady || isCleaningUp) return;
+
+    const canvas = gl.domElement;
 
     const handleMouseMove = (event) => {
       galaxyInstanceRef.current.handleMouseMove(event, camera);
@@ -104,13 +91,13 @@ function GalaxyWrapper({ galaxyIndex = 0, onStarHover }) {
       galaxyInstanceRef.current.handleClick(event, camera);
     };
 
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("click", handleClick);
+    canvas.addEventListener("mousemove", handleMouseMove);
+    canvas.addEventListener("click", handleClick);
     return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("click", handleClick);
+      canvas.removeEventListener("mousemove", handleMouseMove);
+      canvas.removeEventListener("click", handleClick);
     };
-  }, [camera, isReady, isCleaningUp]);
+  }, [camera, isReady, isCleaningUp, gl]);
 
   // Set up hover and click callbacks
   useEffect(() => {
@@ -143,13 +130,6 @@ function GalaxyWrapper({ galaxyIndex = 0, onStarHover }) {
   });
 
   if (!galaxyInstanceRef.current || !isReady || isCleaningUp) {
-    console.log("Waiting for galaxy to be ready:", {
-      hasInstance: !!galaxyInstanceRef.current,
-      isReady,
-      isCleaningUp,
-      galaxyIndex,
-      isInitialMount: isInitialMount.current,
-    });
     return null;
   }
 
@@ -183,58 +163,18 @@ export default function GalaxiesView({
 }) {
   // Get galaxy index from URL params
   const { galaxyId } = useParams();
-  console.log("URL galaxyId:", galaxyId);
 
   // Use URL param if available, otherwise use prop
   const galaxyIndex = galaxyId !== undefined ? galaxyId : propGalaxyIndex;
 
-  // Add debug logging for the incoming galaxyIndex
-  console.log(
-    "GalaxiesView received raw galaxyIndex:",
-    galaxyIndex,
-    typeof galaxyIndex
-  );
-
   // Ensure galaxyIndex is a number
   const numericIndex = Number(galaxyIndex);
-  console.log("Converted to numeric index:", numericIndex);
 
   // Wrap the galaxy index only once at the top level
   const wrappedIndex = wrapGalaxyIndex(numericIndex);
-  console.log(
-    "GalaxiesView received galaxyIndex:",
-    numericIndex,
-    "wrapped to:",
-    wrappedIndex
-  );
 
   // Ensure we have a valid initial index
   const initialIndex = isNaN(numericIndex) ? 0 : wrappedIndex;
-  console.log("Final initial index:", initialIndex);
 
-  return (
-    <>
-      <OrbitControls
-        {...ORBIT_CONTROLS}
-        target={ORBIT_CONTROLS.target}
-        minDistance={ORBIT_CONTROLS.minDistance}
-        maxDistance={ORBIT_CONTROLS.maxDistance}
-        maxPolarAngle={ORBIT_CONTROLS.maxPolarAngle}
-        dampingFactor={ORBIT_CONTROLS.dampingFactor}
-        screenSpacePanning={ORBIT_CONTROLS.screenSpacePanning}
-        enableDamping={ORBIT_CONTROLS.enableDamping}
-        rotateSpeed={ORBIT_CONTROLS.rotateSpeed}
-        zoomSpeed={ORBIT_CONTROLS.zoomSpeed}
-        panSpeed={ORBIT_CONTROLS.panSpeed}
-        enableZoom={ORBIT_CONTROLS.enableZoom}
-        enableRotate={ORBIT_CONTROLS.enableRotate}
-        enablePan={ORBIT_CONTROLS.enablePan}
-        minZoom={ORBIT_CONTROLS.minZoom}
-        maxZoom={ORBIT_CONTROLS.maxZoom}
-        minPan={ORBIT_CONTROLS.minPan}
-        maxPan={ORBIT_CONTROLS.maxPan}
-      />
-      <GalaxyWrapper galaxyIndex={initialIndex} onStarHover={onStarHover} />
-    </>
-  );
+  return <GalaxyWrapper galaxyIndex={initialIndex} onStarHover={onStarHover} />;
 }

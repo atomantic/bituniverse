@@ -68,13 +68,22 @@ docker-compose up
 
 | Key | Action |
 |-----|--------|
-| `←` `→` | Navigate between galaxies/stars/planets |
-| `j` | Jump to random galaxy |
+| `←` `→` | Navigate between siblings at the current zoom level |
+| `Enter` / `Space` / `Click` | Zoom into selection |
+| `Esc` / `Backspace` | Zoom out one level |
+| `j` | Jump to a random galaxy |
 | `m` | Zoom camera to galaxy center |
 | `o` | Reset camera to origin |
+| `t` | Guided tour |
+| `f` | Key lookup (find a 256-bit key's location) |
+| `s` | Share current location |
+| `h` | Navigation history |
+| `b` | Brute-force calculator |
+| `a` | Auto-explore |
+| `k` | Bookmarks |
+| `x` | Scale comparison |
 | `c` | Toggle controls overlay |
 | `i` | Toggle info panels |
-| `Enter` / `Space` / `Click` | Zoom into selection |
 
 ### URL Routes
 
@@ -83,6 +92,7 @@ All views are deep-linkable:
 - `/galaxy/:galaxyId` — View a specific galaxy
 - `/galaxy/:galaxyId/star/:starId` — View a star's solar system
 - `/galaxy/:galaxyId/star/:starId/planet/:planetId` — View a planet
+- `/galaxy/:g/star/:s/planet/:p/region/:r[/sector/:sec/area/:a/ground/:gr/grain/:grn/molecule/:m/atom/:at/quark/:q/string/:str]` — Deep-zoom levels down to individual keys
 
 ## Architecture
 

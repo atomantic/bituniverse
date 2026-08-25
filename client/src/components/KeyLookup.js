@@ -139,6 +139,8 @@ export default function KeyLookup({ active, onClose }) {
       sx={{
         position: "absolute",
         inset: 0,
+        role: "dialog",
+        "aria-modal": true,
         zIndex: 100,
         display: "flex",
         alignItems: "center",

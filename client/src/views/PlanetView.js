@@ -7,10 +7,8 @@ import ProceduralPlanet from "../components/3d/ProceduralPlanet";
 import {
   getRandomPlanetType,
   generatePlanetColor,
-  hashString,
 } from "../config/planetTypes";
 import { ORBIT_CONTROLS } from "../config/renderConfig";
-import { Stars } from "@react-three/drei";
 
 const LAT_DIVISIONS = 7;
 const LON_DIVISIONS = 7;
@@ -115,18 +113,24 @@ function RegionGrid({ planetRadius, onZoneHover, onZoneClick }) {
       onZoneHover?.(null);
       document.body.style.cursor = "default";
     }
-
-    // Update patch visibility
-    if (patchRef.current) {
-      patchMat.opacity = hoveredIdx !== null ? 0.25 : 0;
-      for (let i = 0; i < ZONE_COUNT; i++) {
-        patchRef.current.setColorAt(i,
-          i === hoveredIdx ? new THREE.Color(0.3, 0.96, 1.0) : new THREE.Color(0.3, 0.96, 1.0)
-        );
-      }
-      if (patchRef.current.instanceColor) patchRef.current.instanceColor.needsUpdate = true;
-    }
   });
+
+  // Recolor only the affected patches when hover changes (not all 49 every frame)
+  const prevHoveredRef = useRef(null);
+  useEffect(() => {
+    if (!patchRef.current) return;
+    patchMat.opacity = hoveredIdx !== null ? 0.35 : 0;
+    const baseColor = new THREE.Color(0.3, 0.96, 1.0);
+    const hotColor = new THREE.Color(1.0, 1.0, 1.0);
+    if (prevHoveredRef.current !== null && prevHoveredRef.current !== hoveredIdx) {
+      patchRef.current.setColorAt(prevHoveredRef.current, baseColor);
+    }
+    if (hoveredIdx !== null) {
+      patchRef.current.setColorAt(hoveredIdx, hotColor);
+    }
+    prevHoveredRef.current = hoveredIdx;
+    if (patchRef.current.instanceColor) patchRef.current.instanceColor.needsUpdate = true;
+  }, [hoveredIdx, patchMat]);
 
   return (
     <group ref={groupRef}>
@@ -184,10 +188,6 @@ function Planet({ planetData, isSelected = true }) {
 
   return (
     <group ref={groupRef}>
-      <group renderOrder={-1}>
-        <Stars radius={500} depth={25} count={2000} factor={2} saturation={1} fade speed={0} color="#ffffff" />
-        <Stars radius={400} depth={15} count={1000} factor={4} saturation={1.5} fade speed={0} color="#ffffff" />
-      </group>
       <directionalLight position={[-5, 3, 5]} intensity={1.5} />
       <group renderOrder={1}>
         <ProceduralPlanet
@@ -217,29 +217,30 @@ export default function PlanetView({ onPlanetHover, onRegionHover }) {
   const { galaxyId, starId, planetId } = useParams();
   const navigate = useNavigate();
 
-  const planetSeed = `${galaxyId}${starId}${planetId}`;
-  const planetType = getRandomPlanetType(planetSeed);
-  const [minSize, maxSize] = planetType.sizeRange;
-  const size = minSize + (parseInt(planetSeed.slice(-2), 10) / 100) * (maxSize - minSize);
-  const color = generatePlanetColor(planetType, planetSeed);
-
-  const planetData = {
-    id: planetId,
-    type: planetType.id,
-    name: planetType.name,
-    size,
-    seed: planetSeed,
-    color: color.getHex(),
-    hasAtmosphere: planetType.hasAtmosphere,
-    atmosphereOpacity: planetType.atmosphereOpacity,
-    atmosphereColor: planetType.atmosphereColor,
-    metalness: planetType.metalness,
-    roughness: planetType.roughness,
-    terrainExaggeration: planetType.terrainExaggeration,
-    distance: 40 + (parseInt(planetSeed.slice(-2), 10) % 60),
-    rotationSpeed: 0.1 + (parseInt(planetSeed.slice(-3), 10) % 20) / 100,
-    planetTypeConfig: planetType,
-  };
+  const planetData = useMemo(() => {
+    const planetSeed = `${galaxyId}${starId}${planetId}`;
+    const planetType = getRandomPlanetType(planetSeed);
+    const [minSize, maxSize] = planetType.sizeRange;
+    const size = minSize + (parseInt(planetSeed.slice(-2), 10) / 100) * (maxSize - minSize);
+    const color = generatePlanetColor(planetType, planetSeed);
+    return {
+      id: planetId,
+      type: planetType.id,
+      name: planetType.name,
+      size,
+      seed: planetSeed,
+      color: color.getHex(),
+      hasAtmosphere: planetType.hasAtmosphere,
+      atmosphereOpacity: planetType.atmosphereOpacity,
+      atmosphereColor: planetType.atmosphereColor,
+      metalness: planetType.metalness,
+      roughness: planetType.roughness,
+      terrainExaggeration: planetType.terrainExaggeration,
+      distance: 40 + (parseInt(planetSeed.slice(-2), 10) % 60),
+      rotationSpeed: 0.1 + (parseInt(planetSeed.slice(-3), 10) % 20) / 100,
+      planetTypeConfig: planetType,
+    };
+  }, [galaxyId, starId, planetId]);
 
   const planetRadius = planetData.size * 5;
 

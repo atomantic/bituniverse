@@ -213,27 +213,45 @@ function HexTerrain({ hexData, seedVal, onSectorHover, onSectorClick }) {
       onSectorHover?.(foundIdx);
       document.body.style.cursor = foundIdx !== null ? "pointer" : "default";
     }
-
-    // Update land colors for hover
-    if (landRef.current) {
-      for (let i = 0; i < landHexes.length; i++) {
-        const globalIdx = landIndexMap.get(i);
-        const d = landHexes[i];
-        const base = BIOME_COLORS[d.biome] || BIOME_COLORS.grass;
-        const v = (hashString(`${seedVal}c${d.col}${d.row}`) % 100) / 500 - 0.1;
-        if (globalIdx === hoveredIdx) {
-          landRef.current.setColorAt(i, new THREE.Color(
-            Math.min(1, base[0] + 0.2), Math.min(1, base[1] + 0.2), Math.min(1, base[2] + 0.2)
-          ));
-        } else {
-          landRef.current.setColorAt(i, new THREE.Color(
-            Math.max(0, base[0] + v), Math.max(0, base[1] + v), Math.max(0, base[2] + v)
-          ));
-        }
-      }
-      landRef.current.instanceColor.needsUpdate = true;
-    }
   });
+
+  // Recolor only the affected land tiles when hover changes — not all ~300 every frame
+  const landIdxByGlobal = React.useMemo(() => {
+    const map = new Map();
+    landIndexMap.forEach((globalIdx, i) => map.set(globalIdx, i));
+    return map;
+  }, [landIndexMap]);
+
+  const colorLandTile = React.useCallback((i, highlighted) => {
+    const d = landHexes[i];
+    if (!d) return null;
+    const base = BIOME_COLORS[d.biome] || BIOME_COLORS.grass;
+    const v = (hashString(`${seedVal}c${d.col}${d.row}`) % 100) / 500 - 0.1;
+    const [r, g, b] = highlighted
+      ? [Math.min(1, base[0] + 0.2), Math.min(1, base[1] + 0.2), Math.min(1, base[2] + 0.2)]
+      : [Math.max(0, base[0] + v), Math.max(0, base[1] + v), Math.max(0, base[2] + v)];
+    return new THREE.Color(r, g, b);
+  }, [landHexes, seedVal]);
+
+  const prevHoveredRef = React.useRef(null);
+  React.useEffect(() => {
+    if (!landRef.current || !landRef.current.instanceColor) {
+      prevHoveredRef.current = hoveredIdx;
+      return;
+    }
+    const prev = prevHoveredRef.current;
+    if (prev !== null && prev !== hoveredIdx && landIdxByGlobal.has(prev)) {
+      const c = colorLandTile(landIdxByGlobal.get(prev), false);
+      if (c) landRef.current.setColorAt(landIdxByGlobal.get(prev), c);
+    }
+    if (hoveredIdx !== null && landIdxByGlobal.has(hoveredIdx)) {
+      const i = landIdxByGlobal.get(hoveredIdx);
+      const c = colorLandTile(i, true);
+      if (c) landRef.current.setColorAt(i, c);
+    }
+    prevHoveredRef.current = hoveredIdx;
+    landRef.current.instanceColor.needsUpdate = true;
+  }, [hoveredIdx, landIdxByGlobal, colorLandTile]);
 
   const handleClick = useCallback((e) => {
     e.stopPropagation();

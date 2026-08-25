@@ -48,6 +48,15 @@ export const KEYBOARD_SHORTCUTS = {
 // Create keyboard event listener
 export function createKeyboardListener(handlers) {
   const handleKeyPress = (event) => {
+    // Never hijack keys while the user is typing in a form field
+    const target = event.target;
+    if (target && (target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName))) {
+      return;
+    }
+    if (event.metaKey || event.ctrlKey || event.altKey) {
+      return;
+    }
+
     const key = event.key.toLowerCase();
 
     // Find matching action for the pressed key

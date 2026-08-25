@@ -121,6 +121,8 @@ export default function NavigationHistory({ active, onClose, history, currentPat
       sx={{
         position: "absolute",
         inset: 0,
+        role: "dialog",
+        "aria-modal": true,
         zIndex: 100,
         display: "flex",
         alignItems: "center",
