@@ -38,6 +38,12 @@ describe("keyspaceHierarchy", () => {
         ids.sectorId, ids.areaId, ids.groundId, ids.grainId,
         ids.moleculeId, ids.atomId, ids.quarkId
       );
+      // Independent vector: hand-computed from the hierarchy constants
+      // (3 galaxies + 42 stars + 7 planets + deep-zoom offsets), so an
+      // encoder bug cannot hide behind a matching decoder bug.
+      expect(key).toBe(
+        "000000000358CA45B03864D6398FD6E6D4D9B541E37DC637C48C7587D107097D"
+      );
       const loc = keyToLocation(key);
       for (const [param, value] of Object.entries(ids)) {
         expect(loc[param]).toBe(value);
