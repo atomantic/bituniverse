@@ -42,6 +42,15 @@ describe("keyspaceHierarchy", () => {
       for (const [param, value] of Object.entries(ids)) {
         expect(loc[param]).toBe(value);
       }
+      expect(loc.stringId).toBe(0);
+    });
+
+    it("survives a nonzero offset and lands on the right string", () => {
+      const OFFSET = 42;
+      const key = computeHexKey(0, 0, 0, null, null, null, null, null, null, null, null, OFFSET);
+      const loc = keyToLocation(key);
+      expect(loc.quarkId).toBe(0);
+      expect(loc.stringId).toBe(OFFSET);
     });
   });
 
@@ -62,8 +71,10 @@ describe("keyspaceHierarchy", () => {
       // galaxyId = floor((2^256 - 1) / KEYS_PER_GALAXY); since KEYS_PER_GALAXY
       // floors 2^256/10^12, the remainder leaves one extra partial galaxy.
       expect(loc.galaxyId).toBe(10 ** 12);
-      // Every ID stays a finite non-negative Number — no BigInt leakage,
-      // no overflow into NaN/Infinity.
+      // Exact decode of the trailing partial-galaxy remainder (computed from
+      // the current constants; guards against silent decoding regressions).
+      expect(loc.quarkId).toBe(7885947);
+      expect(loc.stringId).toBe(64911);
       for (const field of [
         "starId", "planetId", "regionId", "sectorId", "areaId",
         "groundId", "grainId", "moleculeId", "atomId", "quarkId", "stringId",
