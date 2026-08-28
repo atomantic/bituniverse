@@ -8,7 +8,9 @@ services:
     container_name: bituniverse
     restart: unless-stopped
     ports:
-      - "3217:3217"
+      # Publish the same port the production server listens on so the app is
+      # reachable through the host's Tailscale/MagicDNS address.
+      - "3233:3233"
     volumes:
       - ./server/data:/app/server/data
     environment:
