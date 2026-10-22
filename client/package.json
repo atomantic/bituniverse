@@ -15,27 +15,13 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.30.6",
-    "react-scripts": "5.0.1",
     "three": "^0.175.0"
   },
   "scripts": {
-    "start": "PORT=3218 react-scripts start",
-    "build": "react-scripts build",
-    "test": "CI=true react-scripts test --watchAll=false",
-    "eject": "react-scripts eject"
-  },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ],
-    "env": {
-      "es2020": true
-    }
-  },
-  "overrides": {
-    "serialize-javascript": "^7.0.5",
-    "underscore": "^1.13.8"
+    "start": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run"
   },
   "browserslist": {
     "production": [
@@ -48,5 +34,11 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "type": "module",
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.1.2",
+    "vite": "^8.3.5",
+    "vitest": "^5.0.5"
   }
 }

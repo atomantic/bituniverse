@@ -50,7 +50,7 @@ npm run setup
 npm run dev
 ```
 
-The client runs on http://localhost:3000 during development, with the API server on port 3233.
+The client runs on http://localhost:3218 during development, with the API server on port 3233.
 
 ### Production Build
 

@@ -5,8 +5,8 @@ React frontend for bituniverse, built with Three.js and React Three Fiber.
 ## Development
 
 ```bash
-npm start    # start dev server on port 3000
-npm test     # run tests
+npm start    # start Vite dev server on port 3218 (proxies /api to :3233)
+npm test     # run tests (Vitest)
 npm run build # production build to /build
 ```
 
